@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Div Day & Night</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #0b1220;
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      --season-cloud-opacity: 1;
+      --season-cloud-speed: 1;
+      --season-tree-density: .9;
+      --season-window-warmth: 1;
+      --season-air-shift: 0;
+      background: linear-gradient(to bottom, #7ec8ff 0%, #d8f1ff 58%, #f7d7a8 100%);
+      transition: background 0.08s linear;
+    }
+
+    .scene.season-spring {
+      --season-cloud-opacity: 1.04;
+      --season-cloud-speed: .93;
+      --season-tree-density: .9;
+      --season-window-warmth: .9;
+      --season-air-shift: 1;
+    }
+
+    .scene.season-summer {
+      --season-cloud-opacity: .98;
+      --season-cloud-speed: 1.02;
+      --season-tree-density: 1;
+      --season-window-warmth: .78;
+      --season-air-shift: .3;
+    }
+
+    .scene.season-autumn {
+      --season-cloud-opacity: .9;
+      --season-cloud-speed: 1.07;
+      --season-tree-density: .78;
+      --season-window-warmth: 1.12;
+      --season-air-shift: -.2;
+    }
+
+    .scene.season-winter {
+      --season-cloud-opacity: .74;
+      --season-cloud-speed: .88;
+      --season-tree-density: .56;
+      --season-window-warmth: 1.3;
+      --season-air-shift: -1;
+    }
+
+    .sun,
+    .moon {
+      z-index: 22;
+      cursor: pointer;
+      transition: transform .18s, box-shadow .18s, opacity .18s, filter .18s;
+    }
+
+    .sun:hover,
+    .moon:hover {
+      transform: scale(1.08);
+    }
+
+    .sun {
+      position: absolute;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff6c9 0%, #ffd45e 60%, #ffbf3c 100%);
+      box-shadow: 0 0 24px rgba(255, 214, 94, .42), 0 0 60px rgba(255, 190, 72, .24);
+    }
+
+    .moon {
+      position: absolute;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 36%, #fff 0%, #eef3ff 60%, #d9e3ff 100%);
+      box-shadow: 0 0 18px rgba(220, 230, 255, .32), 0 0 46px rgba(180, 205, 255, .16);
+      overflow: hidden;
+    }
+
+    .moon-cut {
+      position: absolute;
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      top: 5px;
+      left: 24px;
+      background: rgba(13, 27, 58, .92);
+    }
+
+    .halo {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      margin: -22px 0 0 -22px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 18;
+      opacity: .5;
+      filter: blur(16px);
+    }
+
+    .sun-halo {
+      background: radial-gradient(circle, rgba(255, 213, 95, .42) 0%, rgba(255, 190, 90, .18) 42%, transparent 72%);
+    }
+
+    .moon-halo {
+      background: radial-gradient(circle, rgba(216, 228, 255, .28) 0%, rgba(200, 215, 255, .12) 42%, transparent 72%);
+    }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      z-index: 8;
+      cursor: pointer;
+      transform-origin: center;
+      transition: transform .18s, background .18s, clip-path .18s, box-shadow .18s, opacity .18s, filter .18s;
+    }
+
+    .star:hover {
+      transform: scale(2.6) rotate(8deg);
+      border-radius: 50%;
+      clip-path: none;
+      animation: star-awaken 1.6s ease-in-out infinite;
+    }
+
+    .star.star-type-0:hover {
+      background: #fff4d9 !important;
+      box-shadow: 0 0 10px rgba(255, 238, 195, .9), 0 0 22px rgba(255, 223, 158, .68), 0 0 34px rgba(255, 231, 190, .42);
+    }
+
+    .star.star-type-1:hover {
+      background: #f3f9ff !important;
+      box-shadow: 0 0 10px rgba(233, 245, 255, .9), 0 0 22px rgba(184, 219, 255, .66), 0 0 34px rgba(160, 210, 255, .4);
+    }
+
+    .star.star-type-2:hover {
+      background: #f8fbff !important;
+      box-shadow: 0 0 10px rgba(245, 250, 255, .9), 0 0 22px rgba(202, 227, 255, .66), 0 0 34px rgba(179, 211, 255, .4);
+    }
+
+    .star.shooting {
+      border-radius: 50%;
+      clip-path: none;
+      transition: none;
+      pointer-events: none;
+      filter: saturate(1.05);
+    }
+
+    @keyframes star-awaken {
+      0% {
+        transform: scale(2.2) rotate(-4deg);
+      }
+
+      50% {
+        transform: scale(2.75) rotate(6deg);
+      }
+
+      100% {
+        transform: scale(2.2) rotate(-4deg);
+      }
+    }
+
+    .cloud {
+      position: absolute;
+      z-index: 12;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .34);
+      filter: blur(1px);
+      cursor: pointer;
+      transition: opacity .18s, transform .26s, filter .26s;
+    }
+
+    .cloud-weather {
+      position: absolute;
+      z-index: 13;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .weather-particle {
+      position: absolute;
+      opacity: 0;
+      transform-origin: center;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+
+    .global-precip {
+      position: absolute;
+      inset: 0;
+      z-index: 47;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .global-precip-particle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 2px;
+      will-change: transform, opacity;
+    }
+
+    .ground,
+    .ground-back,
+    .ground-front {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    .ground-back {
+      height: 12vh;
+      min-height: 76px;
+      z-index: 30;
+      background: linear-gradient(to top, #708669 0%, #8ba17b 100%);
+    }
+
+    .ground-front {
+      height: 18vh;
+      min-height: 108px;
+      z-index: 33;
+      border-radius: 56% 44% 0 0 / 22% 22% 0 0;
+      background: linear-gradient(to top, #4f6659 0%, #6d8567 54%, #7f9374 100%);
+      box-shadow: inset 0 10px 16px rgba(255, 255, 255, .06);
+    }
+
+    .ground-frost {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 20vh;
+      min-height: 120px;
+      z-index: 34;
+      pointer-events: none;
+      opacity: 0;
+      background: linear-gradient(to top, rgba(225, 236, 250, .44) 0%, rgba(218, 232, 249, .24) 36%, rgba(220, 238, 255, 0) 84%);
+      transition: opacity .55s ease;
+    }
+
+    .hill {
+      position: absolute;
+      z-index: 31;
+      border-radius: 58% 42% 42% 58% / 76% 82% 18% 24%;
+      transform-origin: 50% 100%;
+      box-shadow: inset 0 8px 14px rgba(255, 255, 255, .03);
+    }
+
+    .path-right {
+      position: absolute;
+      z-index: 35;
+      pointer-events: none;
+      background: linear-gradient(to bottom, #b49a78 0%, #a98c69 100%);
+      border-radius: 52% 48% 0 0 / 18% 18% 0 0;
+      clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+      box-shadow: inset 0 1px 1px rgba(255, 236, 208, .2), 0 1px 3px rgba(0, 0, 0, .1);
+      filter: blur(.35px);
+    }
+
+    .wheat-clump {
+      position: absolute;
+      z-index: 38;
+      width: 16px;
+      height: 36px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .45s ease;
+    }
+
+    .wheat-stem {
+      position: absolute;
+      bottom: 0;
+      width: 2px;
+      border-radius: 2px;
+      background: linear-gradient(to top, rgba(132, 100, 54, .92) 0%, rgba(198, 158, 88, .92) 100%);
+      transform-origin: 50% 100%;
+    }
+
+    .ground-leaf {
+      position: absolute;
+      z-index: 37;
+      width: 8px;
+      height: 5px;
+      border-radius: 64% 36% 62% 38%;
+      background: linear-gradient(120deg, rgba(178, 122, 58, .86), rgba(126, 78, 34, .9));
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .45s ease;
+    }
+
+    .leaf-burst {
+      position: absolute;
+      z-index: 39;
+      width: 8px;
+      height: 5px;
+      border-radius: 68% 32% 62% 38%;
+      pointer-events: none;
+      opacity: 0;
+      background: linear-gradient(120deg, rgba(206, 143, 71, .92), rgba(130, 82, 38, .9));
+    }
+
+    .tree {
+      position: absolute;
+      z-index: 36;
+      cursor: pointer;
+      transform-origin: 50% 100%;
+      border-radius: 999px 999px 2px 2px;
+      background: linear-gradient(to top, #2f3d36 0%, #4b5d52 100%);
+      box-shadow: inset 0 2px 2px rgba(255, 255, 255, .06);
+      transition: transform .25s, filter .25s, background .25s;
+    }
+
+    .tree-crown {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: calc(var(--season-tree-density) * .92);
+      background: radial-gradient(circle at 40% 36%, rgba(142, 163, 143, .84) 0%, rgba(83, 104, 87, .92) 62%, rgba(53, 70, 61, .95) 100%);
+      filter: blur(.35px);
+      transform-origin: center;
+      transition: opacity .26s, transform .26s, background .26s;
+    }
+
+    .house {
+      position: absolute;
+      z-index: 40;
+      border-radius: 8px 8px 3px 3px;
+      background: linear-gradient(to top, #9a8a7d 0%, #b9a791 52%, #cbb8a2 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 5px 14px rgba(0, 0, 0, .14);
+    }
+
+    .roof {
+      position: absolute;
+      z-index: 43;
+      background: linear-gradient(to right, #3f3532 0%, #5a4841 50%, #3f3532 100%);
+      border-radius: 8px 8px 2px 2px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .roof-left,
+    .roof-right {
+      position: absolute;
+      z-index: 42;
+      background: linear-gradient(to top, #433834 0%, #635049 100%);
+    }
+
+    .roof-left {
+      clip-path: polygon(100% 100%, 0 100%, 100% 0);
+    }
+
+    .roof-right {
+      clip-path: polygon(0 100%, 100% 100%, 0 0);
+    }
+
+    .chimney {
+      position: absolute;
+      z-index: 41;
+      background: linear-gradient(to top, #4a3d38 0%, #685248 100%);
+      border-radius: 4px 4px 0 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .window {
+      position: absolute;
+      z-index: 45;
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(255, 230, 146, .16);
+      border: 1px solid rgba(75, 58, 48, .55);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, .14), 0 0 8px rgba(255, 218, 120, .05);
+      transition: background .2s, box-shadow .2s;
+    }
+
+    .window-sill {
+      position: absolute;
+      z-index: 44;
+      background: linear-gradient(to right, #3f322b 0%, #6e5848 100%);
+      border-radius: 2px;
+      opacity: .95;
+    }
+
+    .door {
+      position: absolute;
+      z-index: 44;
+      cursor: pointer;
+      border-radius: 12px 12px 3px 3px;
+      background: linear-gradient(to top, #513a2e 0%, #6c4d3b 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 6px rgba(0, 0, 0, .14);
+      transition: background .2s, box-shadow .2s, opacity .3s, transform .3s;
+      transform-origin: left center;
+    }
+
+    .door-inner {
+      position: absolute;
+      z-index: 43;
+      border-radius: 11px 11px 2px 2px;
+      background: linear-gradient(to top, rgba(98, 108, 128, .72) 0%, rgba(143, 160, 186, .56) 52%, rgba(188, 205, 226, .44) 100%);
+      box-shadow: inset 0 0 10px rgba(28, 36, 48, .24);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s, filter .3s;
+    }
+
+    .indoor-person {
+      position: absolute;
+      z-index: 45;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .26s, transform .26s;
+    }
+
+    .indoor-person-head {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, #8d7361 0%, #b4937a 100%);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+    }
+
+    .indoor-person-body,
+    .indoor-person-arm-left,
+    .indoor-person-arm-right {
+      position: absolute;
+      border-radius: 999px;
+      transform-origin: top center;
+      background: linear-gradient(to bottom, #4f3f37 0%, #6a5750 100%);
+    }
+
+    .person {
+      position: absolute;
+      z-index: 46;
+      transition: opacity .2s;
+      pointer-events: none;
+    }
+
+    .person-head {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, #4f4942 0%, #666c75 100%);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .14);
+    }
+
+    .person-body,
+    .person-arm-left,
+    .person-arm-right,
+    .person-leg-left,
+    .person-leg-right {
+      position: absolute;
+      background: linear-gradient(to bottom, #4b443e 0%, #5c626d 100%);
+      border-radius: 999px;
+      transform-origin: top center;
+    }
+
+    .delivery-person {
+      position: absolute;
+      z-index: 47;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .delivery-person-head {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(to bottom, #90735f 0%, #bb987e 100%);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .16);
+    }
+
+    .delivery-person-body,
+    .delivery-person-arm-left,
+    .delivery-person-arm-right,
+    .delivery-person-leg-left,
+    .delivery-person-leg-right,
+    .delivery-person-bag {
+      position: absolute;
+      border-radius: 999px;
+      transform-origin: top center;
+    }
+
+    .delivery-person-body {
+      background: linear-gradient(to bottom, #556e8e 0%, #7a95b6 100%);
+    }
+
+    .delivery-person-arm-left,
+    .delivery-person-arm-right {
+      background: linear-gradient(to bottom, #4f6989 0%, #718fb4 100%);
+    }
+
+    .delivery-person-leg-left,
+    .delivery-person-leg-right {
+      background: linear-gradient(to bottom, #3f4759 0%, #5b657a 100%);
+    }
+
+    .delivery-person-bag {
+      border-radius: 4px;
+      background: linear-gradient(to bottom, #8f7249 0%, #b89868 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 236, 202, .22), 0 1px 2px rgba(0, 0, 0, .12);
+    }
+
+    .impact-wave {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 -7px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 47;
+      opacity: 0;
+      border: 1px solid rgba(255, 230, 190, .7);
+      box-shadow: 0 0 14px rgba(255, 220, 164, .45), inset 0 0 8px rgba(255, 247, 230, .22);
+      transform: scale(.6);
+    }
+
+    .time-wave {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      margin: -12px 0 0 -12px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 46;
+      opacity: 0;
+      background: radial-gradient(circle, rgba(255, 255, 255, .34) 0%, rgba(185, 220, 255, .18) 38%, transparent 72%);
+      filter: blur(.6px);
+      transform: scale(.5);
+    }
+
+    .time-orbit {
+      position: absolute;
+      width: 132px;
+      height: 132px;
+      margin: -66px 0 0 -66px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 44;
+      opacity: 0;
+      border: 1.6px solid rgba(246, 252, 255, .35);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 0 24px rgba(186, 214, 255, .28);
+      transform-origin: center;
+      filter: blur(.2px);
+    }
+
+    .time-orbit-hand {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1px;
+      height: 54px;
+      margin-left: -0.5px;
+      margin-top: -54px;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, .9), rgba(255, 255, 255, .0));
+      transform-origin: 50% 100%;
+      opacity: .95;
+    }
+
+    .wash {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 45;
+      opacity: 0;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, .16), transparent 24%), linear-gradient(to bottom, rgba(255, 255, 255, .03), rgba(255, 255, 255, .08));
+      mix-blend-mode: screen;
+      transition: opacity .28s;
+    }
+
+    .season-wash {
+      position: absolute;
+      inset: 0;
+      z-index: 46;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 58% 24%, rgba(219, 240, 255, .24) 0%, rgba(213, 236, 255, .08) 32%, transparent 74%);
+      mix-blend-mode: screen;
+      transition: opacity .45s ease;
+    }
+
+    .heat-shimmer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 17vh;
+      height: 22vh;
+      z-index: 46;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(160% 84% at 50% 100%, rgba(255, 215, 150, .2) 0%, rgba(255, 226, 184, .12) 32%, rgba(255, 238, 206, 0) 74%);
+      mix-blend-mode: screen;
+      filter: blur(2.6px) saturate(1.08);
+      transition: opacity .4s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="scene" id="scene">
+    <div class="halo sun-halo" id="sunHalo"></div>
+    <div class="sun" id="sun"></div>
+    <div class="halo moon-halo" id="moonHalo"></div>
+    <div class="moon" id="moon">
+      <div class="moon-cut" id="moonCut"></div>
+    </div>
+
+    <div class="cloud" id="cloud1"></div>
+    <div class="cloud" id="cloud2"></div>
+    <div class="cloud" id="cloud3"></div>
+    <div class="cloud-weather" id="cloudWeather1"></div>
+    <div class="cloud-weather" id="cloudWeather2"></div>
+    <div class="cloud-weather" id="cloudWeather3"></div>
+    <div class="global-precip" id="globalPrecip"></div>
+
+    <div class="ground-back" id="groundBack"></div>
+    <div class="ground-front" id="groundFront"></div>
+    <div class="ground-frost" id="groundFrost"></div>
+    <div class="hill" id="hill1"></div>
+    <div class="hill" id="hill2"></div>
+    <div class="hill" id="hill3"></div>
+
+    <div class="path-right" id="pathRight"></div>
+    <div class="wheat-clump" id="wheat1" style="left:16%;bottom:15%;">
+      <div class="wheat-stem" style="left:2px;height:24px;transform:rotate(-8deg);"></div>
+      <div class="wheat-stem" style="left:7px;height:30px;transform:rotate(2deg);"></div>
+      <div class="wheat-stem" style="left:12px;height:22px;transform:rotate(9deg);"></div>
+    </div>
+    <div class="wheat-clump" id="wheat2" style="left:25%;bottom:14%;">
+      <div class="wheat-stem" style="left:2px;height:20px;transform:rotate(-10deg);"></div>
+      <div class="wheat-stem" style="left:7px;height:27px;transform:rotate(3deg);"></div>
+      <div class="wheat-stem" style="left:11px;height:21px;transform:rotate(11deg);"></div>
+    </div>
+    <div class="wheat-clump" id="wheat3" style="left:63%;bottom:15%;">
+      <div class="wheat-stem" style="left:2px;height:22px;transform:rotate(-12deg);"></div>
+      <div class="wheat-stem" style="left:8px;height:29px;transform:rotate(0deg);"></div>
+      <div class="wheat-stem" style="left:12px;height:24px;transform:rotate(10deg);"></div>
+    </div>
+    <div class="wheat-clump" id="wheat4" style="left:73%;bottom:14%;">
+      <div class="wheat-stem" style="left:2px;height:23px;transform:rotate(-7deg);"></div>
+      <div class="wheat-stem" style="left:7px;height:31px;transform:rotate(3deg);"></div>
+      <div class="wheat-stem" style="left:12px;height:22px;transform:rotate(8deg);"></div>
+    </div>
+    <div class="ground-leaf" id="groundLeaf1" style="left:14%;bottom:16%;transform:rotate(28deg);"></div>
+    <div class="ground-leaf" id="groundLeaf2" style="left:19%;bottom:15%;transform:rotate(-12deg);"></div>
+    <div class="ground-leaf" id="groundLeaf3" style="left:61%;bottom:15%;transform:rotate(17deg);"></div>
+    <div class="ground-leaf" id="groundLeaf4" style="left:67%;bottom:14%;transform:rotate(-21deg);"></div>
+    <div class="ground-leaf" id="groundLeaf5" style="left:74%;bottom:15%;transform:rotate(31deg);"></div>
+    <div class="ground-leaf" id="groundLeaf6" style="left:82%;bottom:14%;transform:rotate(-15deg);"></div>
+    <div class="tree" id="tree1">
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+    </div>
+    <div class="tree" id="tree2">
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+    </div>
+    <div class="tree" id="tree3">
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+    </div>
+    <div class="tree" id="tree4">
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+      <div class="tree-crown"></div>
+    </div>
+
+    <div class="house" id="house"></div>
+    <div class="roof-left" id="roofLeft"></div>
+    <div class="roof-right" id="roofRight"></div>
+    <div class="roof" id="roof"></div>
+    <div class="chimney" id="chimney"></div>
+    <div class="window" id="window1"></div>
+    <div class="window" id="window2"></div>
+    <div class="window-sill" id="windowSill1"></div>
+    <div class="window-sill" id="windowSill2"></div>
+    <div class="door" id="door"></div>
+    <div class="door-inner" id="doorInner"></div>
+    <div class="indoor-person" id="indoorPerson">
+      <div class="indoor-person-head" id="indoorPersonHead"></div>
+      <div class="indoor-person-body" id="indoorPersonBody"></div>
+      <div class="indoor-person-arm-left" id="indoorPersonArmLeft"></div>
+      <div class="indoor-person-arm-right" id="indoorPersonArmRight"></div>
+    </div>
+    <div class="delivery-person" id="deliveryPerson">
+      <div class="delivery-person-head" id="deliveryPersonHead"></div>
+      <div class="delivery-person-body" id="deliveryPersonBody"></div>
+      <div class="delivery-person-arm-left" id="deliveryPersonArmLeft"></div>
+      <div class="delivery-person-arm-right" id="deliveryPersonArmRight"></div>
+      <div class="delivery-person-leg-left" id="deliveryPersonLegLeft"></div>
+      <div class="delivery-person-leg-right" id="deliveryPersonLegRight"></div>
+      <div class="delivery-person-bag" id="deliveryPersonBag"></div>
+    </div>
+
+    <div class="person" id="person">
+      <div class="person-head" id="personHead"></div>
+      <div class="person-body" id="personBody"></div>
+      <div class="person-arm-left" id="personArmLeft"></div>
+      <div class="person-arm-right" id="personArmRight"></div>
+      <div class="person-leg-left" id="personLegLeft"></div>
+      <div class="person-leg-right" id="personLegRight"></div>
+    </div>
+
+    <div class="impact-wave" id="impactWave"></div>
+    <div class="time-wave" id="timeWave"></div>
+    <div class="time-orbit" id="timeOrbit">
+      <div class="time-orbit-hand" id="timeOrbitHand"></div>
+    </div>
+    <div class="wash" id="wash"></div>
+    <div class="season-wash" id="seasonWash"></div>
+    <div class="heat-shimmer" id="heatShimmer"></div>
+  </div>
+
+  <script>
+    (function () {
+      function getById(id) {
+        return document.getElementById(id);
+      }
+
+      const scene = getById("scene");
+      const sun = getById("sun");
+      const moon = getById("moon");
+      const moonCut = getById("moonCut");
+      const sunHalo = getById("sunHalo");
+      const moonHalo = getById("moonHalo");
+      const wash = getById("wash");
+      const seasonWash = getById("seasonWash");
+      const heatShimmer = getById("heatShimmer");
+      const groundFrost = getById("groundFrost");
+
+      const impactWave = getById("impactWave");
+      const timeWave = getById("timeWave");
+      const timeOrbit = getById("timeOrbit");
+      const timeOrbitHand = getById("timeOrbitHand");
+
+      const clouds = [getById("cloud1"), getById("cloud2"), getById("cloud3")];
+      const cloudWeatherHolders = [getById("cloudWeather1"), getById("cloudWeather2"), getById("cloudWeather3")];
+      const globalPrecip = getById("globalPrecip");
+
+      const groundBack = getById("groundBack");
+      const groundFront = getById("groundFront");
+      const hills = [getById("hill1"), getById("hill2"), getById("hill3")];
+
+      const pathRight = getById("pathRight");
+      const wheatClumps = [getById("wheat1"), getById("wheat2"), getById("wheat3"), getById("wheat4")];
+      const groundLeaves = [
+        getById("groundLeaf1"), getById("groundLeaf2"), getById("groundLeaf3"),
+        getById("groundLeaf4"), getById("groundLeaf5"), getById("groundLeaf6")
+      ];
+
+      const trees = [getById("tree1"), getById("tree2"), getById("tree3"), getById("tree4")];
+      const treeCrowns = trees.map(tree => Array.from(tree.querySelectorAll(".tree-crown")));
+
+      const house = getById("house");
+      const roof = getById("roof");
+      const roofLeft = getById("roofLeft");
+      const roofRight = getById("roofRight");
+      const chimney = getById("chimney");
+      const door = getById("door");
+      const doorInner = getById("doorInner");
+      const windows = [getById("window1"), getById("window2")];
+      const sills = [getById("windowSill1"), getById("windowSill2")];
+
+      const indoorPerson = getById("indoorPerson");
+      const indoorPersonHead = getById("indoorPersonHead");
+      const indoorPersonBody = getById("indoorPersonBody");
+      const indoorPersonArmLeft = getById("indoorPersonArmLeft");
+      const indoorPersonArmRight = getById("indoorPersonArmRight");
+      const deliveryPerson = getById("deliveryPerson");
+      const deliveryPersonHead = getById("deliveryPersonHead");
+      const deliveryPersonBody = getById("deliveryPersonBody");
+      const deliveryPersonArmLeft = getById("deliveryPersonArmLeft");
+      const deliveryPersonArmRight = getById("deliveryPersonArmRight");
+      const deliveryPersonLegLeft = getById("deliveryPersonLegLeft");
+      const deliveryPersonLegRight = getById("deliveryPersonLegRight");
+      const deliveryPersonBag = getById("deliveryPersonBag");
+
+      const person = getById("person");
+      const personHead = getById("personHead");
+      const personBody = getById("personBody");
+      const arms = [getById("personArmLeft"), getById("personArmRight")];
+      const legs = [getById("personLegLeft"), getById("personLegRight")];
+
+      const houseInteractiveEls = [house, roof, roofLeft, roofRight, chimney, door, ...windows];
+
+      let w = window.innerWidth;
+      let h = window.innerHeight;
+      let doorCenterX = 0;
+      let personOffsetX = 0;
+      let deliveryOffsetX = 0;
+      let lastSeasonId = "spring";
+
+      const stars = [];
+      const leafBurstParticles = [];
+
+      let cycle = 0.18;
+      let direction = 1;
+      let reverseUntil = 0;
+      let reverseFlashUntil = 0;
+      let starFlashUntil = 0;
+      let orbitUntil = 0;
+      let orbitStartTime = 0;
+      let orbitBaseAngle = 0;
+      let sunBurstUntil = 0;
+
+      let impactWaveUntil = 0;
+      let impactWaveX = 0;
+      let impactWaveY = 0;
+
+      let timeWaveUntil = 0;
+      let timeWaveX = 0;
+      let timeWaveY = 0;
+      let warmWaveUntil = 0;
+      let personState = "home";
+      let personLeftDone = false;
+      let personReturnedDone = false;
+      let prevSunH = -1;
+
+      const houseInteriorState = {
+        phase: "idle",
+        phaseStart: 0
+      };
+
+      const seasonSymbolState = {
+        current: null
+      };
+
+      const cloudCfg = [
+        { x: .10, y: .18, w: 180, h: 42, speed: .10 },
+        { x: .56, y: .26, w: 240, h: 56, speed: .07 },
+        { x: .80, y: .15, w: 150, h: 36, speed: .12 }
+      ];
+
+      const hillCfg = [
+        { w: .62, h: .14, left: -.10, bottom: .13, rotate: -4, layer: "far" },
+        { w: .54, h: .20, left: .18, bottom: .11, rotate: -2, layer: "mid" },
+        { w: .44, h: .17, left: .58, bottom: .10, rotate: 3, layer: "front" }
+      ];
+
+      const hillPalettes = {
+        day: [[116, 131, 160], [92, 119, 111], [67, 88, 78]],
+        night: [[72, 83, 109], [62, 81, 78], [45, 59, 55]],
+        sunset: [[110, 115, 156], [104, 111, 97], [82, 80, 72]]
+      };
+
+      const groundPalettes = {
+        back: { day: [136, 162, 122], sunset: [138, 129, 107], night: [83, 103, 94] },
+        front: { day: [110, 138, 103], sunset: [111, 104, 88], night: [64, 83, 77] }
+      };
+
+      const housePalettes = {
+        wall: { day: [203, 184, 162], sunset: [168, 150, 132], night: [138, 124, 112] },
+        roof: { day: [93, 76, 69], sunset: [83, 67, 60], night: [63, 53, 50] },
+        chimney: { day: [104, 82, 72], sunset: [94, 74, 65], night: [74, 61, 56] },
+        sill: { day: [78, 60, 49], sunset: [70, 54, 46], night: [57, 46, 40] },
+        door: { day: [108, 77, 59], sunset: [100, 72, 56], night: [81, 58, 46] }
+      };
+
+      const treeCfg = [
+        { s: .017, ht: .13, left: .11, bottom: .115 },
+        { s: .015, ht: .11, left: .19, bottom: .12 },
+        { s: .018, ht: .15, left: .79, bottom: .108 },
+        { s: .015, ht: .12, left: .86, bottom: .118 }
+      ];
+
+      const treeCrownLayout = [
+        { w: 2.8, h: .42, x: -1.02, y: .32 },
+        { w: 3.6, h: .45, x: -1.35, y: .58 },
+        { w: 2.95, h: .39, x: -0.36, y: .78 }
+      ];
+
+      const starLayout = [
+        [.08, .08, 8, .2, 0], [.16, .06, 10, 1.1, 1], [.25, .09, 9, .6, 2], [.35, .07, 11, 1.4, 0], [.46, .10, 8, .9, 1],
+        [.58, .08, 10, 1.7, 2], [.70, .11, 8, .4, 0], [.82, .09, 9, 1.9, 1], [.90, .13, 10, .3, 2], [.12, .17, 9, 1.2, 0],
+        [.24, .15, 12, .8, 1], [.38, .18, 8, 1.5, 2], [.52, .16, 10, .5, 0], [.66, .19, 9, 1.3, 1], [.79, .17, 11, .7, 2],
+        [.18, .24, 8, 1.6, 0], [.32, .22, 10, .1, 1], [.48, .25, 9, 1.8, 2], [.62, .23, 8, .35, 0], [.74, .27, 10, 1.0, 1],
+        [.40, .33, 8, 1.45, 2], [.56, .35, 11, .95, 0]
+      ];
+
+      const pathPalettes = {
+        day: [[180, 154, 120], [169, 140, 105]],
+        sunset: [[155, 134, 109], [138, 117, 94]],
+        night: [[122, 106, 88], [102, 88, 75]]
+      };
+
+      const treePalette = {
+        day: [68, 79, 67],
+        sunset: [61, 70, 64],
+        night: [49, 57, 64]
+      };
+
+      const personPalette = {
+        day: [75, 68, 62],
+        sunset: [88, 81, 74],
+        night: [92, 98, 109]
+      };
+
+      const seasonProfiles = [
+        {
+          id: "spring",
+          className: "season-spring",
+          cloudOpacity: 1.04,
+          cloudSpeed: 0.93,
+          cloudScale: 1.03,
+          cloudLift: -4,
+          cloudThickness: 0.95,
+          treeDensity: 0.90,
+          treeSpread: 1.05,
+          treeSwing: 0.92,
+          treeHue: [118, 152, 123],
+          treeShade: [51, 69, 58],
+          groundBackShift: [12, 16, 9],
+          groundFrontShift: [9, 14, 8],
+          pathShift: [8, 8, 4],
+          windowColor: [255, 218, 164],
+          windowBoost: 0.92,
+          doorBoost: 0.94,
+          houseTint: [4, 7, 5],
+          personShift: [4, 7, 6],
+          waveAmp: 6.6,
+          indoorStayMs: 1400,
+          sunScale: 1.02,
+          sunHaloBoost: 1.02,
+          precipIntensity: 0.88,
+          foliageFallRate: 0.16,
+          frostLevel: 0.05,
+          wheatVisible: 0.08,
+          coldWash: 0.22,
+          heatShimmer: 0.02,
+          enterPrecipType: "rain",
+          enterPrecipMs: 4600,
+          enterPrecipIntensity: 1.45
+        },
+        {
+          id: "summer",
+          className: "season-summer",
+          cloudOpacity: 0.98,
+          cloudSpeed: 1.03,
+          cloudScale: 1.05,
+          cloudLift: -2,
+          cloudThickness: 1.03,
+          treeDensity: 1.00,
+          treeSpread: 1.10,
+          treeSwing: 1.02,
+          treeHue: [102, 141, 106],
+          treeShade: [43, 61, 50],
+          groundBackShift: [10, 20, 11],
+          groundFrontShift: [6, 18, 11],
+          pathShift: [7, 10, 3],
+          windowColor: [255, 212, 152],
+          windowBoost: 0.84,
+          doorBoost: 0.88,
+          houseTint: [7, 8, 4],
+          personShift: [5, 6, 3],
+          waveAmp: 7.0,
+          indoorStayMs: 1360,
+          sunScale: 1.16,
+          sunHaloBoost: 1.2,
+          precipIntensity: 0.62,
+          foliageFallRate: 0.04,
+          frostLevel: 0,
+          wheatVisible: 0.03,
+          coldWash: 0.06,
+          heatShimmer: 0.92,
+          enterPrecipType: "none",
+          enterPrecipMs: 0,
+          enterPrecipIntensity: 0
+        },
+        {
+          id: "autumn",
+          className: "season-autumn",
+          cloudOpacity: 0.90,
+          cloudSpeed: 1.08,
+          cloudScale: 0.97,
+          cloudLift: -7,
+          cloudThickness: 0.92,
+          treeDensity: 0.78,
+          treeSpread: 0.98,
+          treeSwing: 0.84,
+          treeHue: [143, 112, 76],
+          treeShade: [66, 55, 45],
+          groundBackShift: [22, 8, -2],
+          groundFrontShift: [24, 6, -3],
+          pathShift: [18, 8, 4],
+          windowColor: [255, 205, 128],
+          windowBoost: 1.12,
+          doorBoost: 1.14,
+          houseTint: [11, 5, 2],
+          personShift: [10, 6, 2],
+          waveAmp: 5.9,
+          indoorStayMs: 1500,
+          sunScale: 1.03,
+          sunHaloBoost: 1.06,
+          precipIntensity: 0.74,
+          foliageFallRate: 0.95,
+          frostLevel: 0.08,
+          wheatVisible: 1,
+          coldWash: 0.18,
+          heatShimmer: 0.16,
+          enterPrecipType: "none",
+          enterPrecipMs: 0,
+          enterPrecipIntensity: 0
+        },
+        {
+          id: "winter",
+          className: "season-winter",
+          cloudOpacity: 0.74,
+          cloudSpeed: 0.88,
+          cloudScale: 0.92,
+          cloudLift: -11,
+          cloudThickness: 0.86,
+          treeDensity: 0.56,
+          treeSpread: 0.92,
+          treeSwing: 0.66,
+          treeHue: [99, 115, 138],
+          treeShade: [46, 53, 68],
+          groundBackShift: [-14, -10, -5],
+          groundFrontShift: [-13, -11, -6],
+          pathShift: [-6, -6, -4],
+          windowColor: [255, 192, 116],
+          windowBoost: 1.30,
+          doorBoost: 1.24,
+          houseTint: [-4, -4, -5],
+          personShift: [-4, -2, 6],
+          waveAmp: 4.2,
+          indoorStayMs: 1120,
+          sunScale: 0.97,
+          sunHaloBoost: 0.94,
+          precipIntensity: 0.86,
+          foliageFallRate: 0.28,
+          frostLevel: 0.92,
+          wheatVisible: 0.12,
+          coldWash: 0.72,
+          heatShimmer: 0.04,
+          enterPrecipType: "snow",
+          enterPrecipMs: 4200,
+          enterPrecipIntensity: 1.25
+        }
+      ];
+
+      const seasonState = {
+        currentIndex: 0,
+        fromIndex: 0,
+        toIndex: 0,
+        mix: 0,
+        transitionStart: 0,
+        isTransitioning: false,
+        transitionMs: 2400,
+        autoEveryMs: 62000,
+        nextAutoAt: 0
+      };
+
+      const treePulseStates = trees.map(() => ({
+        hovered: false,
+        pulseUntil: 0,
+        pulseStrength: 0,
+        resonateUntil: 0,
+        resonateStrength: 0
+      }));
+
+      const cloudWeatherState = cloudWeatherHolders.map(() => ({
+        hovered: false,
+        pulseUntil: 0,
+        pulseStrength: 0,
+        eventType: "none",
+        eventStart: 0,
+        eventUntil: 0,
+        particles: []
+      }));
+
+      const globalPrecipState = {
+        type: "none",
+        start: 0,
+        until: 0,
+        intensity: 1,
+        particles: []
+      };
+
+      const SCENE_RATIO = {
+        houseBottom: 0.115,
+        roofOverhang: 0.012,
+        pathHeightCompact: 0.13,
+        pathHeightWide: 0.15,
+        orbitWidth: 0.84,
+        orbitHeight: 0.58
+      };
+
+      const HOUSE_RATIO = {
+        leftCompact: 0.56,
+        leftWide: 0.574,
+        widthCompact: 0.116,
+        widthWide: 0.11,
+        heightCompact: 0.108,
+        heightWide: 0.105
+      };
+
+      const CYCLE_SPEED = 0.00054;
+      const REVERSE_FLASH_MS = 820;
+      const STAR_FLASH_MS = 620;
+      const IMPACT_WAVE_MS = 520;
+      const TIME_WAVE_MS = 760;
+      const ORBIT_FADE_MS = 520;
+      const METEOR_PRE_MS = 250;
+      const METEOR_FALL_MS = 1400;
+      const METEOR_IMPACT_MS = 320;
+      const ORBIT_CENTER_Y = 0.74;
+      const SUN_HEIGHT_OFFSET = 0.18;
+      const SUN_HEIGHT_RANGE = 0.92;
+      const DUSK_SUN_HEIGHT = 0.45;
+      const SKY_GRADIENT_MID = 58;
+      const GROUND_BUMP_PX = 2;
+      const TREE_PULSE_MS = 860;
+      const TREE_RESONATE_MS = 1040;
+      const CLOUD_PULSE_MS = 1000;
+      const WEATHER_PARTICLE_COUNT = 16;
+      const GLOBAL_PRECIP_COUNT = 150;
+      const LEAF_BURST_COUNT = 14;
+      const HOUSE_WARM_WAVE_MS = 780;
+
+      function setRect(el, o) {
+        if (!el) return;
+        if (o.width != null) el.style.width = o.width + "px";
+        if (o.height != null) el.style.height = o.height + "px";
+        if (o.left != null) el.style.left = o.left + "px";
+        if (o.top != null) el.style.top = o.top + "px";
+        if (o.bottom != null) el.style.bottom = o.bottom + "px";
+      }
+
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const mix = (a, b, t) => a + (b - a) * t;
+      const lerp = (c1, c2, t) => c1.map((v, i) => Math.round(mix(v, c2[i], t)));
+      const blendArr = (a, b, t) => a.map((v, i) => mix(v, b[i], t));
+      const rgb = arr => "rgb(" + Math.round(arr[0]) + "," + Math.round(arr[1]) + "," + Math.round(arr[2]) + ")";
+      const shiftColor = (arr, shift, amount) => arr.map((v, i) => clamp(v + shift[i] * amount, 0, 255));
+
+      function weatherFromSeason(seasonId) {
+        if (seasonId === "summer") return "glow";
+        if (seasonId === "autumn") return "leaf";
+        if (seasonId === "winter") return "snow";
+        return "rain";
+      }
+
+      function setSceneSeasonClass(index) {
+        for (let i = 0; i < seasonProfiles.length; i++) {
+          scene.classList.remove(seasonProfiles[i].className);
+        }
+        scene.classList.add(seasonProfiles[index].className);
+      }
+
+      function blendSeasonProfile(a, b, t) {
+        const out = {};
+        for (const key in a) {
+          const av = a[key];
+          const bv = b[key];
+          if (Array.isArray(av)) out[key] = blendArr(av, bv, t);
+          else if (typeof av === "number") out[key] = mix(av, bv, t);
+          else out[key] = t < 0.5 ? av : bv;
+        }
+        return out;
+      }
+
+      function applySeasonCssVars(season) {
+        scene.style.setProperty("--season-cloud-opacity", season.cloudOpacity.toFixed(3));
+        scene.style.setProperty("--season-cloud-speed", season.cloudSpeed.toFixed(3));
+        scene.style.setProperty("--season-tree-density", season.treeDensity.toFixed(3));
+        scene.style.setProperty("--season-window-warmth", season.windowBoost.toFixed(3));
+        scene.style.setProperty("--season-air-shift", ((season.cloudLift || 0) * 0.08).toFixed(3));
+      }
+
+      function queueSeasonChange(targetIndex, now, manual) {
+        const baseIndex = seasonState.isTransitioning ? seasonState.toIndex : seasonState.currentIndex;
+        if (targetIndex === baseIndex && !seasonState.isTransitioning) return;
+        seasonState.fromIndex = baseIndex;
+        seasonState.toIndex = targetIndex;
+        seasonState.transitionStart = now;
+        seasonState.mix = 0;
+        seasonState.isTransitioning = true;
+        seasonState.currentIndex = baseIndex;
+        seasonState.nextAutoAt = now + seasonState.autoEveryMs;
+        setSceneSeasonClass(targetIndex);
+        if (manual) {
+          const rect = trees[3].getBoundingClientRect();
+          timeWaveX = rect.left + rect.width / 2;
+          timeWaveY = rect.top + rect.height * 0.35;
+          timeWaveUntil = Math.max(timeWaveUntil, now + TIME_WAVE_MS);
+        }
+      }
+
+      function updateSeasonState(now) {
+        if (!seasonState.nextAutoAt) seasonState.nextAutoAt = now + seasonState.autoEveryMs;
+        if (!seasonState.isTransitioning && now >= seasonState.nextAutoAt) {
+          queueSeasonChange((seasonState.currentIndex + 1) % seasonProfiles.length, now, false);
+        }
+        if (seasonState.isTransitioning) {
+          seasonState.mix = clamp((now - seasonState.transitionStart) / seasonState.transitionMs, 0, 1);
+          if (seasonState.mix >= 1) {
+            seasonState.currentIndex = seasonState.toIndex;
+            seasonState.isTransitioning = false;
+            seasonState.mix = 0;
+            setSceneSeasonClass(seasonState.currentIndex);
+            const landed = seasonProfiles[seasonState.currentIndex];
+            if (landed.enterPrecipType && landed.enterPrecipType !== "none") {
+              triggerGlobalPrecip(landed.enterPrecipType, now, landed.enterPrecipMs || 3200, landed.enterPrecipIntensity || 1);
+            }
+          }
+        }
+        const from = seasonProfiles[seasonState.isTransitioning ? seasonState.fromIndex : seasonState.currentIndex];
+        const to = seasonProfiles[seasonState.isTransitioning ? seasonState.toIndex : seasonState.currentIndex];
+        const season = blendSeasonProfile(from, to, seasonState.isTransitioning ? seasonState.mix : 0);
+        seasonSymbolState.current = season;
+        applySeasonCssVars(season);
+        lastSeasonId = season.id;
+        return season;
+      }
+
+      function createCloudWeatherParticles() {
+        for (let i = 0; i < cloudWeatherHolders.length; i++) {
+          const holder = cloudWeatherHolders[i];
+          const state = cloudWeatherState[i];
+          for (let p = 0; p < WEATHER_PARTICLE_COUNT; p++) {
+            const el = document.createElement("div");
+            el.className = "weather-particle";
+            holder.appendChild(el);
+            state.particles.push({
+              el,
+              seed: Math.random(),
+              spread: Math.random(),
+              drift: Math.random() * 2 - 1,
+              offset: Math.random() * 997
+            });
+          }
+        }
+      }
+
+      function createGlobalPrecipParticles() {
+        for (let i = 0; i < GLOBAL_PRECIP_COUNT; i++) {
+          const el = document.createElement("div");
+          el.className = "global-precip-particle";
+          globalPrecip.appendChild(el);
+          globalPrecipState.particles.push({
+            el,
+            x: Math.random(),
+            offset: Math.random() * 997,
+            speed: 0.68 + Math.random() * 0.62,
+            size: 1 + Math.random() * 1.2
+          });
+        }
+      }
+
+      function triggerGlobalPrecip(type, now, durationMs, intensity) {
+        if (type !== "rain" && type !== "snow") return;
+        globalPrecipState.type = type;
+        globalPrecipState.start = now;
+        globalPrecipState.until = now + durationMs;
+        globalPrecipState.intensity = intensity || 1;
+      }
+
+      function createLeafBurstParticles() {
+        for (let i = 0; i < LEAF_BURST_COUNT; i++) {
+          const el = document.createElement("div");
+          el.className = "leaf-burst";
+          scene.appendChild(el);
+          leafBurstParticles.push({
+            el,
+            active: false,
+            start: 0,
+            duration: 0,
+            x0: 0,
+            y0: 0,
+            vx: 0,
+            vy: 0,
+            rot: 0,
+            spin: 0
+          });
+        }
+      }
+
+      const meteorPalettes = [
+        { bg: "rgba(255,238,198,.98)", trail: "rgba(255,214,164,.9)", glow: "rgba(255,176,146,.65)", accent: "rgba(255,248,220,.98)" },
+        { bg: "rgba(198,230,255,.98)", trail: "rgba(125,211,252,.85)", glow: "rgba(56,189,248,.6)", accent: "rgba(224,242,254,.98)" },
+        { bg: "rgba(255,218,230,.98)", trail: "rgba(255,182,241,.88)", glow: "rgba(251,113,133,.62)", accent: "rgba(254,240,248,.98)" },
+        { bg: "rgba(204,251,241,.98)", trail: "rgba(94,234,212,.82)", glow: "rgba(45,212,191,.58)", accent: "rgba(236,254,255,.98)" }
+      ];
+
+      function createStar(x, y, size, delay, type) {
+        const el = document.createElement("div");
+        el.className = "star star-type-" + (type % 3);
+        el.dataset.xp = x;
+        el.dataset.yp = y;
+        el.dataset.delay = delay;
+        el.dataset.size = size;
+        el.dataset.type = String(type % 3);
+        el.dataset.falling = "0";
+        el.dataset.fallPhase = "idle";
+        el.dataset.fallStart = "0";
+        el.dataset.preDuration = "0";
+        el.dataset.fallDuration = "0";
+        el.dataset.impactDuration = "0";
+        el.dataset.fallDx = "0";
+        el.dataset.fallRotate = "0";
+        el.dataset.fallPalette = "0";
+        el.dataset.impactX = "0";
+        el.dataset.impactY = "0";
+        scene.appendChild(el);
+        el.addEventListener("click", () => triggerStarFall(el));
+        stars.push(el);
+      }
+
+      starLayout.forEach(([x, y, s, d, t]) => createStar(x, y, s, d, t));
+
+      function triggerStarFall(star) {
+        if (star.dataset.falling === "1") return;
+        const now = performance.now();
+        const baseX = parseFloat(star.dataset.baseX || star.dataset.xp * w);
+        const targetX = doorCenterX + (Math.random() * 46 - 23);
+        const dx = clamp(targetX - baseX, -320, 320);
+        star.dataset.falling = "1";
+        star.dataset.fallPhase = "pre";
+        star.dataset.fallStart = now;
+        star.dataset.preDuration = 220 + Math.random() * 120;
+        star.dataset.fallDuration = 1280 + Math.random() * 420;
+        star.dataset.impactDuration = 320;
+        star.dataset.fallDx = dx;
+        star.dataset.fallRotate = (Math.sign(dx || 1) * (180 + Math.random() * 160)).toFixed(2);
+        star.dataset.fallPalette = Math.floor(Math.random() * 4);
+        star.dataset.impactX = (baseX + dx).toFixed(2);
+        star.classList.add("shooting");
+      }
+
+      function getSkyColors(daylight, duskAmount) {
+        const night = [[8, 22, 47], [21, 42, 88], [63, 45, 104]];
+        const day = [[126, 200, 255], [216, 241, 255], [247, 215, 168]];
+        const sunset = [[80, 104, 210], [214, 122, 176], [245, 173, 101]];
+        const base = night.map((n, i) => lerp(n, day[i], daylight));
+        const final = base.map((b, i) => lerp(b, sunset[i], duskAmount));
+        return { top: rgb(final[0]), mid: rgb(final[1]), bottom: rgb(final[2]) };
+      }
+
+      function triggerTreePulse(index, strength, now) {
+        const state = treePulseStates[index];
+        state.pulseUntil = now + TREE_PULSE_MS;
+        state.pulseStrength = Math.max(state.pulseStrength, strength);
+      }
+
+      function triggerTreeResonance(indexes, strength, now) {
+        for (let i = 0; i < indexes.length; i++) {
+          const idx = indexes[i];
+          if (idx < 0 || idx >= treePulseStates.length) continue;
+          const state = treePulseStates[idx];
+          state.resonateUntil = now + TREE_RESONATE_MS;
+          state.resonateStrength = Math.max(state.resonateStrength, strength);
+        }
+      }
+
+      function triggerLeafBurst(treeIndex, now, force) {
+        const rect = trees[treeIndex].getBoundingClientRect();
+        const xCenter = rect.left + rect.width * 0.5;
+        const yTop = rect.top + rect.height * 0.4;
+        let activated = 0;
+        for (let i = 0; i < leafBurstParticles.length && activated < 6; i++) {
+          const p = leafBurstParticles[i];
+          if (p.active && now - p.start < p.duration * 0.75) continue;
+          p.active = true;
+          p.start = now;
+          p.duration = 1200 + Math.random() * 650;
+          p.x0 = xCenter + (Math.random() * 30 - 15);
+          p.y0 = yTop + (Math.random() * 18 - 9);
+          p.vx = (Math.random() * 70 + 30) * (Math.random() < 0.5 ? -1 : 1) * force;
+          p.vy = -(Math.random() * 60 + 26) * force;
+          p.rot = Math.random() * 360;
+          p.spin = (Math.random() * 220 + 80) * (Math.random() < 0.5 ? -1 : 1);
+          activated++;
+        }
+      }
+
+      function triggerCloudWeather(index, now) {
+        const state = cloudWeatherState[index];
+        if (state.eventUntil > now) return;
+        const season = seasonSymbolState.current || seasonProfiles[seasonState.currentIndex];
+        state.eventType = weatherFromSeason(season.id);
+        state.eventStart = now;
+        state.eventUntil = now + (1080 + season.precipIntensity * 700);
+        state.pulseUntil = state.eventUntil;
+        state.pulseStrength = 1;
+        if (state.eventType === "rain" || state.eventType === "snow") {
+          const ms = state.eventType === "rain" ? 3600 : 3400;
+          const power = state.eventType === "rain" ? 1.2 : 1.1;
+          triggerGlobalPrecip(state.eventType, now, ms, power);
+        }
+      }
+
+      function triggerHouseEvent() {
+        const now = performance.now();
+        houseInteriorState.phase = "approach";
+        houseInteriorState.phaseStart = now;
+        triggerTreeResonance([1, 2], 0.62, now);
+        const rect = door.getBoundingClientRect();
+        timeWaveX = rect.left + rect.width / 2;
+        timeWaveY = rect.top + rect.height * 0.55;
+        timeWaveUntil = Math.max(timeWaveUntil, now + TIME_WAVE_MS * 0.85);
+        warmWaveUntil = now + HOUSE_WARM_WAVE_MS;
+      }
+
+      function bindInteractions() {
+        for (let i = 0; i < clouds.length; i++) {
+          clouds[i].addEventListener("mouseenter", () => { cloudWeatherState[i].hovered = true; });
+          clouds[i].addEventListener("mouseleave", () => { cloudWeatherState[i].hovered = false; });
+          clouds[i].addEventListener("click", () => {
+            const now = performance.now();
+            triggerCloudWeather(i, now);
+          });
+        }
+
+        for (let i = 0; i < trees.length; i++) {
+          trees[i].addEventListener("mouseenter", () => { treePulseStates[i].hovered = true; });
+          trees[i].addEventListener("mouseleave", () => { treePulseStates[i].hovered = false; });
+          trees[i].addEventListener("click", () => {
+            const now = performance.now();
+            triggerTreePulse(i, i === 3 ? 1.12 : 0.92, now);
+            if ((seasonSymbolState.current || seasonProfiles[seasonState.currentIndex]).id === "autumn") {
+              triggerLeafBurst(i, now, 1);
+            }
+            if (i === 3) {
+              queueSeasonChange((seasonState.currentIndex + 1) % seasonProfiles.length, now, true);
+              triggerTreeResonance([2, 3], 0.78, now);
+            }
+          });
+        }
+
+        for (let i = 0; i < houseInteractiveEls.length; i++) {
+          houseInteractiveEls[i].style.cursor = "pointer";
+          houseInteractiveEls[i].addEventListener("click", triggerHouseEvent);
+        }
+      }
+
+      function layoutHills() {
+        hillCfg.forEach((cfg, i) => {
+          setRect(hills[i], { width: w * cfg.w, height: h * cfg.h, left: w * cfg.left, bottom: h * cfg.bottom });
+          const baseT = "rotate(" + cfg.rotate + "deg)";
+          hills[i].dataset.baseTransform = baseT;
+          hills[i].style.transform = baseT;
+          hills[i].style.zIndex = cfg.layer === "far" ? "31" : (cfg.layer === "mid" ? "32" : "34");
+        });
+      }
+
+      function layoutTrees() {
+        treeCfg.forEach((cfg, i) => {
+          const sw = Math.max(w * cfg.s, 10);
+          const sh = h * cfg.ht;
+          setRect(trees[i], { width: sw, height: sh, left: w * cfg.left, bottom: h * cfg.bottom });
+          const crowns = treeCrowns[i];
+          for (let c = 0; c < crowns.length; c++) {
+            const spec = treeCrownLayout[c % treeCrownLayout.length];
+            setRect(crowns[c], {
+              width: sw * spec.w,
+              height: sh * spec.h,
+              left: sw * spec.x,
+              bottom: sh * spec.y
+            });
+          }
+        });
+      }
+
+      function layoutHouse(compact) {
+        const houseLeft = w * (compact ? HOUSE_RATIO.leftCompact : HOUSE_RATIO.leftWide);
+        const hw = w * (compact ? HOUSE_RATIO.widthCompact : HOUSE_RATIO.widthWide);
+        const hh = h * (compact ? HOUSE_RATIO.heightCompact : HOUSE_RATIO.heightWide);
+        const houseBottom = h * SCENE_RATIO.houseBottom;
+
+        setRect(house, { width: hw, height: hh, left: houseLeft, bottom: houseBottom });
+
+        const roofW = w * .135;
+        const roofH = Math.max(h * .017, 10);
+        const roofBottom = houseBottom + hh;
+        setRect(roof, { width: roofW, height: roofH, left: houseLeft - w * SCENE_RATIO.roofOverhang, bottom: roofBottom });
+        setRect(roofLeft, { width: w * .068, height: h * .063, left: houseLeft - w * SCENE_RATIO.roofOverhang, bottom: roofBottom + roofH - h * .002 });
+        setRect(roofRight, { width: w * .068, height: h * .063, left: houseLeft + w * .056, bottom: roofBottom + roofH - h * .002 });
+        setRect(chimney, { width: Math.max(w * .016, 12), height: h * .022, left: houseLeft + w * .074, bottom: roofBottom + roofH + h * .032 });
+
+        const winW = Math.max(w * .017, 13);
+        const winH = h * .028;
+        setRect(windows[0], { width: winW, height: winH, left: houseLeft + hw * .16, bottom: houseBottom + hh * .38 });
+        setRect(windows[1], { width: winW, height: winH, left: houseLeft + hw * .66, bottom: houseBottom + hh * .38 });
+
+        const sillW = Math.max(w * .023, 17);
+        const sillH = Math.max(h * .0045, 3);
+        setRect(sills[0], { width: sillW, height: sillH, left: houseLeft + hw * .145, bottom: houseBottom + hh * .34 });
+        setRect(sills[1], { width: sillW, height: sillH, left: houseLeft + hw * .645, bottom: houseBottom + hh * .34 });
+
+        const doorW = Math.max(w * .0175, 13);
+        const doorH = h * .053;
+        const doorLeft = houseLeft + hw * .47;
+        setRect(door, { width: doorW, height: doorH, left: doorLeft, bottom: houseBottom });
+        setRect(doorInner, { width: doorW * 0.92, height: doorH * 0.98, left: doorLeft + doorW * 0.04, bottom: houseBottom });
+
+        doorCenterX = doorLeft + doorW / 2;
+
+        const pathTopW = Math.max(doorW * 1.08, 14);
+        const pathBottomW = pathTopW * 2.8;
+        const pathH = h * (compact ? SCENE_RATIO.pathHeightCompact : SCENE_RATIO.pathHeightWide);
+        setRect(pathRight, { width: pathBottomW, height: pathH, left: doorCenterX - pathBottomW / 2 + w * .001, bottom: 0 });
+
+        const indoorScale = Math.max(w / 1550, 0.65);
+        setRect(indoorPerson, { width: 16 * indoorScale, height: 30 * indoorScale, left: doorCenterX - 8 * indoorScale, bottom: houseBottom + 2 });
+        setRect(indoorPersonHead, { width: 6 * indoorScale, height: 6 * indoorScale, left: 5 * indoorScale, top: 0 });
+        setRect(indoorPersonBody, { width: 5 * indoorScale, height: 12 * indoorScale, left: 5.5 * indoorScale, top: 5 * indoorScale });
+        setRect(indoorPersonArmLeft, { width: 2 * indoorScale, height: 9 * indoorScale, left: 3.8 * indoorScale, top: 6 * indoorScale });
+        setRect(indoorPersonArmRight, { width: 2 * indoorScale, height: 9 * indoorScale, left: 10.2 * indoorScale, top: 6 * indoorScale });
+
+        const deliveryScale = Math.max(w / 1480, 0.72);
+        setRect(deliveryPerson, { width: 18 * deliveryScale, height: 34 * deliveryScale, left: doorCenterX - 9 * deliveryScale, bottom: houseBottom });
+        setRect(deliveryPersonHead, { width: 6.5 * deliveryScale, height: 6.5 * deliveryScale, left: 5.6 * deliveryScale, top: 0 });
+        setRect(deliveryPersonBody, { width: 6 * deliveryScale, height: 13 * deliveryScale, left: 5.7 * deliveryScale, top: 5.6 * deliveryScale });
+        setRect(deliveryPersonArmLeft, { width: 2.1 * deliveryScale, height: 9.6 * deliveryScale, left: 3.9 * deliveryScale, top: 7.2 * deliveryScale });
+        setRect(deliveryPersonArmRight, { width: 2.1 * deliveryScale, height: 9.4 * deliveryScale, left: 11.8 * deliveryScale, top: 7.3 * deliveryScale });
+        setRect(deliveryPersonLegLeft, { width: 2.3 * deliveryScale, height: 12 * deliveryScale, left: 6.3 * deliveryScale, top: 20.5 * deliveryScale });
+        setRect(deliveryPersonLegRight, { width: 2.3 * deliveryScale, height: 12 * deliveryScale, left: 9.8 * deliveryScale, top: 20.5 * deliveryScale });
+        setRect(deliveryPersonBag, { width: 6.2 * deliveryScale, height: 7.2 * deliveryScale, left: 11.9 * deliveryScale, top: 15.1 * deliveryScale });
+        deliveryOffsetX = 9 * deliveryScale;
+      }
+
+      function layoutOutdoorPerson() {
+        const scale = Math.max(w / 1440, .75);
+        const head = 10 * scale;
+        const bodyW = 8 * scale;
+        const bodyH = 18 * scale;
+        const limbW = 3 * scale;
+        const armH = 12 * scale;
+        const legH = 14 * scale;
+        setRect(personHead, { width: head, height: head, left: 5 * scale, top: 0 });
+        setRect(personBody, { width: bodyW, height: bodyH, left: 6 * scale, top: 8 * scale });
+        setRect(arms[0], { width: limbW, height: armH, left: 4 * scale, top: 10 * scale });
+        setRect(arms[1], { width: limbW, height: armH, left: 14 * scale, top: 10 * scale });
+        setRect(legs[0], { width: limbW, height: legH, left: 7 * scale, top: 24 * scale });
+        setRect(legs[1], { width: limbW, height: legH, left: 11 * scale, top: 24 * scale });
+        personOffsetX = 10 * scale;
+      }
+
+      function layoutStars() {
+        stars.forEach(s => {
+          const x = parseFloat(s.dataset.xp) * w;
+          const y = parseFloat(s.dataset.yp) * h;
+          s.dataset.baseX = x;
+          s.dataset.baseY = y;
+          s.style.width = s.dataset.size + "px";
+          s.style.height = s.dataset.size + "px";
+          s.style.left = x + "px";
+          s.style.top = y + "px";
+        });
+      }
+
+      function layout() {
+        w = window.innerWidth;
+        h = window.innerHeight;
+        if (!timeWaveX && !timeWaveY) {
+          timeWaveX = w * .5;
+          timeWaveY = h * .36;
+        }
+        const compact = w < 900;
+        layoutHills();
+        layoutTrees();
+        layoutHouse(compact);
+        layoutOutdoorPerson();
+        layoutStars();
+      }
+
+      function getHouseInteriorDurations(season) {
+        return {
+          approach: 960,
+          glow: 440,
+          opening: 680,
+          greet: season.indoorStayMs + 560,
+          closing: 700,
+          depart: 980
+        };
+      }
+
+      function updateOutdoorPerson(daylight, moonlight, sunX, sunH, moonH, now, season) {
+        const homeX = doorCenterX - personOffsetX;
+        const homeY = h * SCENE_RATIO.houseBottom;
+        const sunCenterX = w * 0.5;
+
+        const sunrise = direction === 1 && prevSunH <= 0 && sunH > 0;
+        if (sunrise) {
+          personLeftDone = false;
+          personReturnedDone = false;
+          personState = "home";
+        }
+        prevSunH = sunH;
+
+        if (!personLeftDone && personState === "home" && sunH > .12 && sunX >= sunCenterX) {
+          personState = "leaving";
+        }
+        if (personLeftDone && !personReturnedDone && personState === "away" && sunX < sunCenterX && sunH < .22) {
+          personState = "returning";
+        }
+
+        let px = homeX;
+        let py = homeY;
+        let opacity = 0;
+        let walk = 0;
+
+        if (personState === "leaving") {
+          const leaveP = clamp((sunH - .12) / .70, 0, 1);
+          px = homeX;
+          py = mix(homeY, 0, leaveP);
+          opacity = clamp(1 - leaveP * 1.08, 0, 1);
+          walk = opacity > .02 ? 1 : 0;
+          if (leaveP >= 1) {
+            personState = "away";
+            personLeftDone = true;
+          }
+        } else if (personState === "away") {
+          px = homeX;
+          py = 0;
+          opacity = 0;
+          walk = 0;
+        } else if (personState === "returning") {
+          const returnP = clamp((.22 - sunH) / .57, 0, 1);
+          px = homeX;
+          py = mix(0, homeY, returnP);
+          const isHome = returnP >= .985;
+          opacity = isHome ? 0 : clamp(.2 + (1 - returnP) * .75, 0, 1);
+          walk = isHome ? 0 : 1;
+          if (isHome) {
+            personState = "home";
+            personReturnedDone = true;
+          }
+        }
+        py += walk ? Math.sin(now * .004) * 1.5 : 0;
+
+        person.style.left = px + "px";
+        person.style.bottom = py + "px";
+        person.style.opacity = String(opacity);
+        person.style.filter = "brightness(" + (0.66 + daylight * 0.08 + moonlight * 0.1) + ")";
+
+        const armSwing = Math.sin(now * .006) * (walk ? 7 : 2);
+        const legSwing = Math.sin(now * .006 + Math.PI) * (walk ? 5.2 : 1.6);
+        arms[0].style.transform = "rotate(" + (18 + armSwing) + "deg)";
+        arms[1].style.transform = "rotate(" + (-18 - armSwing) + "deg)";
+        legs[0].style.transform = "rotate(" + (8 + legSwing) + "deg)";
+        legs[1].style.transform = "rotate(" + (-8 - legSwing) + "deg)";
+
+        const personBase = lerp(personPalette.night, personPalette.day, daylight);
+        const personFinal = shiftColor(lerp(personBase, personPalette.sunset, clamp((1 - daylight) * 0.35, 0, 1)), season.personShift, 0.72);
+        personHead.style.background = "linear-gradient(to bottom, " + rgb(lerp(personFinal, [34, 31, 29], 0.14)) + " 0%, " + rgb(lerp(personFinal, [145, 152, 166], 0.08)) + " 100%)";
+        personBody.style.background = "linear-gradient(to bottom, " + rgb(lerp(personFinal, [33, 30, 28], 0.15)) + " 0%, " + rgb(personFinal) + " 100%)";
+        for (let i = 0; i < arms.length; i++) {
+          arms[i].style.background = "linear-gradient(to bottom, " + rgb(lerp(personFinal, [31, 29, 28], 0.18)) + " 0%, " + rgb(personFinal) + " 100%)";
+        }
+        for (let i = 0; i < legs.length; i++) {
+          legs[i].style.background = "linear-gradient(to bottom, " + rgb(lerp(personFinal, [31, 29, 28], 0.2)) + " 0%, " + rgb(personFinal) + " 100%)";
+        }
+      }
+
+      function updateHouseInterior(now, season) {
+        const durations = getHouseInteriorDurations(season);
+        let phase = houseInteriorState.phase;
+        let elapsed = now - houseInteriorState.phaseStart;
+        if (!houseInteriorState.phaseStart) {
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        }
+
+        if (phase === "approach" && elapsed >= durations.approach) {
+          phase = houseInteriorState.phase = "door_glow";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        } else if (phase === "door_glow" && elapsed >= durations.glow) {
+          phase = houseInteriorState.phase = "door_opening";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        } else if (phase === "door_opening" && elapsed >= durations.opening) {
+          phase = houseInteriorState.phase = "indoor_greet";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        } else if (phase === "indoor_greet" && elapsed >= durations.greet) {
+          phase = houseInteriorState.phase = "door_closing";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        } else if (phase === "door_closing" && elapsed >= durations.closing) {
+          phase = houseInteriorState.phase = "depart";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        } else if (phase === "depart" && elapsed >= durations.depart) {
+          phase = houseInteriorState.phase = "idle";
+          houseInteriorState.phaseStart = now;
+          elapsed = 0;
+        }
+
+        let doorOpen = 0;
+        let indoorOpacity = 0;
+        let pulse = 0;
+        let wave = 0;
+        let route = 0;
+        let deliveryOpacity = 0;
+        let walk = 0;
+
+        if (phase === "approach") {
+          const p = clamp(elapsed / durations.approach, 0, 1);
+          route = p;
+          deliveryOpacity = clamp(0.1 + p * 0.9, 0, 1);
+          walk = 1;
+        } else if (phase === "door_glow") {
+          const p = clamp(elapsed / durations.glow, 0, 1);
+          route = 1;
+          deliveryOpacity = 1;
+          pulse = 0.45 + p * 0.55;
+        } else if (phase === "door_opening") {
+          const p = clamp(elapsed / durations.opening, 0, 1);
+          doorOpen = p;
+          indoorOpacity = clamp((p - 0.2) / 0.8, 0, 1);
+          route = 1;
+          deliveryOpacity = 1;
+          pulse = 0.92 - p * 0.14;
+          wave = indoorOpacity;
+        } else if (phase === "indoor_greet") {
+          doorOpen = 1;
+          indoorOpacity = 0.78;
+          route = 1;
+          deliveryOpacity = 1;
+          wave = 1;
+          pulse = 0.78 + Math.sin(now * 0.004) * 0.05;
+        } else if (phase === "door_closing") {
+          const p = clamp(elapsed / durations.closing, 0, 1);
+          doorOpen = 1 - p;
+          indoorOpacity = clamp(1 - p * 1.15, 0, 1);
+          route = 1;
+          deliveryOpacity = 1;
+          wave = indoorOpacity;
+          pulse = 0.54 * (1 - p);
+        } else if (phase === "depart") {
+          const p = clamp(elapsed / durations.depart, 0, 1);
+          route = 1 - p;
+          deliveryOpacity = clamp(1 - p * 1.08, 0, 1);
+          walk = deliveryOpacity > 0.03 ? 1 : 0;
+        }
+        return { phase, doorOpen, indoorOpacity, pulse, wave, route, deliveryOpacity, walk };
+      }
+
+      function updateIndoorPersonVisual(now, season, interior, daylight, moonlight) {
+        const residentOpacity = interior.indoorOpacity * (interior.phase === "indoor_greet" ? 0.9 : 0.72);
+        indoorPerson.style.opacity = String(residentOpacity);
+        indoorPerson.style.transform = "translateY(" + (-interior.indoorOpacity * 1.6 + Math.sin(now * 0.0037) * .5) + "px)";
+        indoorPerson.style.filter = "brightness(" + (0.82 + moonlight * 0.1 + interior.pulse * 0.08) + ")";
+        doorInner.style.opacity = String(clamp(interior.doorOpen * 0.95, 0, .95));
+        doorInner.style.filter = "brightness(" + (0.78 + interior.pulse * 0.18 + moonlight * 0.08) + ")";
+
+        const warm = season.windowColor;
+        const headMid = [mix(145, warm[0], .1), mix(128, warm[1], .06), mix(115, warm[2], .05)];
+        const bodyMid = [mix(86, warm[0], .06), mix(95, warm[1], .07), mix(109, warm[2], .09)];
+        indoorPersonHead.style.background = "linear-gradient(to bottom, " + rgb(lerp(headMid, [56, 48, 43], 0.2)) + " 0%, " + rgb(headMid) + " 100%)";
+        indoorPersonBody.style.background = "linear-gradient(to bottom, " + rgb(lerp(bodyMid, [42, 41, 54], 0.16)) + " 0%, " + rgb(bodyMid) + " 100%)";
+        indoorPersonArmLeft.style.background = indoorPersonBody.style.background;
+        indoorPersonArmRight.style.background = indoorPersonBody.style.background;
+
+        const waveMotion = Math.sin(now * 0.011) * (10 + season.waveAmp * .55) * interior.wave;
+        indoorPersonArmRight.style.transform = "rotate(" + (-20 - waveMotion) + "deg)";
+        indoorPersonArmLeft.style.transform = "rotate(" + (13 + Math.sin(now * 0.0045) * 2.2 * interior.wave) + "deg)";
+      }
+
+      function updateDeliveryPersonVisual(now, season, interior, daylight, moonlight) {
+        const targetX = doorCenterX - deliveryOffsetX - Math.max(14, w * 0.012);
+        const routeStartX = targetX - Math.max(28, w * 0.022);
+        const homeX = mix(routeStartX, targetX, interior.route);
+        const homeY = h * SCENE_RATIO.houseBottom;
+        const y = mix(0, homeY, interior.route);
+        const moving = interior.walk > 0.5;
+        const bob = moving ? Math.sin(now * 0.0045) * 1.5 : Math.sin(now * 0.0032) * 0.35;
+
+        deliveryPerson.style.left = homeX + "px";
+        deliveryPerson.style.bottom = (y + bob) + "px";
+        deliveryPerson.style.opacity = String(interior.deliveryOpacity);
+        deliveryPerson.style.filter = "brightness(" + (0.76 + daylight * 0.09 + moonlight * 0.06) + ")";
+
+        const armSwing = Math.sin(now * .0065) * (moving ? 7.6 : 2.4);
+        const legSwing = Math.sin(now * .0065 + Math.PI) * (moving ? 5.8 : 1.8);
+        deliveryPersonArmLeft.style.transform = "rotate(" + (16 + armSwing) + "deg)";
+        deliveryPersonArmRight.style.transform = "rotate(" + (-16 - armSwing) + "deg)";
+        deliveryPersonLegLeft.style.transform = "rotate(" + (8 + legSwing) + "deg)";
+        deliveryPersonLegRight.style.transform = "rotate(" + (-8 - legSwing) + "deg)";
+        deliveryPersonBag.style.transform = "rotate(" + (-10 + Math.sin(now * 0.005 + 1.3) * (moving ? 5 : 1.8)) + "deg)";
+
+        const warm = season.windowColor;
+        const skin = [mix(146, warm[0], .05), mix(121, warm[1], .04), mix(104, warm[2], .03)];
+        deliveryPersonHead.style.background = "linear-gradient(to bottom, " + rgb(lerp(skin, [73, 63, 56], 0.18)) + " 0%, " + rgb(skin) + " 100%)";
+      }
+
+      function applyReverseState(now) {
+        if (reverseUntil && now > reverseUntil) {
+          direction = 1;
+          reverseUntil = 0;
+          wash.style.opacity = "0";
+        }
+        cycle += CYCLE_SPEED * direction;
+        if (cycle > 1) cycle -= 1;
+        if (cycle < 0) cycle += 1;
+      }
+
+      function computeOrbit() {
+        const angle = cycle * Math.PI * 2;
+        const orbitW = w * SCENE_RATIO.orbitWidth;
+        const orbitH = h * SCENE_RATIO.orbitHeight;
+        const cx = w * 0.5;
+        const cy = h * ORBIT_CENTER_Y;
+        const sunX = cx + Math.cos(angle + Math.PI) * (orbitW / 2);
+        const sunY = cy - Math.sin(angle + Math.PI) * (orbitH / 2);
+        const moonX = cx + Math.cos(angle) * (orbitW / 2);
+        const moonY = cy - Math.sin(angle) * (orbitH / 2);
+        const sunH = clamp((cy - sunY) / (orbitH / 2), -1, 1);
+        const moonH = clamp((cy - moonY) / (orbitH / 2), -1, 1);
+        return { sunX, sunY, moonX, moonY, sunH, moonH };
+      }
+
+      function computeLighting(sunH, moonH) {
+        const daylight = clamp((sunH + SUN_HEIGHT_OFFSET) / SUN_HEIGHT_RANGE, 0, 1);
+        const duskAmount = clamp(1 - Math.abs(sunH) / DUSK_SUN_HEIGHT, 0, 1) * (1 - daylight * 0.25);
+        const moonlight = clamp((moonH + SUN_HEIGHT_OFFSET) / SUN_HEIGHT_RANGE, 0, 1) * (1 - daylight * 0.75);
+        const sky = getSkyColors(daylight, duskAmount);
+        return { daylight, duskAmount, moonlight, sky };
+      }
+
+      function updateSkyBackground(sky) {
+        scene.style.background = "linear-gradient(to bottom, " + sky.top + " 0%, " + sky.mid + " " + SKY_GRADIENT_MID + "%, " + sky.bottom + " 100%)";
+      }
+
+      function updateSunAndMoon(sunX, sunY, moonX, moonY, daylight, moonlight, reverseFlash, sky, season, now) {
+        sun.style.left = sunX + "px";
+        sun.style.top = sunY + "px";
+        moon.style.left = moonX + "px";
+        moon.style.top = moonY + "px";
+        sunHalo.style.left = sunX + "px";
+        sunHalo.style.top = sunY + "px";
+        moonHalo.style.left = moonX + "px";
+        moonHalo.style.top = moonY + "px";
+
+        sun.style.opacity = clamp(0.08 + daylight * 0.98, 0.06, 1);
+        const summerBurst = clamp((sunBurstUntil - now) / 760, 0, 1);
+        sunHalo.style.opacity = clamp((0.08 + daylight * 0.7 + reverseFlash * 0.28) * season.sunHaloBoost + summerBurst * 0.22, 0.06, 1);
+        moon.style.opacity = clamp(0.1 + moonlight * 0.98, 0.08, 1);
+        moonHalo.style.opacity = clamp(0.06 + moonlight * 0.55 + reverseFlash * 0.22, 0.04, 0.85);
+
+        sun.style.transform = "scale(" + ((0.95 + daylight * 0.08 + reverseFlash * 0.08 + summerBurst * 0.12) * season.sunScale) + ")";
+        moon.style.transform = "scale(" + (0.94 + moonlight * 0.08 + reverseFlash * 0.08) + ")";
+        sunHalo.style.transform = "scale(" + ((1 + reverseFlash * 0.28 + summerBurst * 0.22) * season.sunHaloBoost) + ")";
+        moonHalo.style.transform = "scale(" + (1 + reverseFlash * 0.24) + ")";
+        if (season.id === "summer") {
+          sun.style.background = "radial-gradient(circle at 35% 35%, #fff0c8 0%, #ffb056 56%, #f08234 100%)";
+          sun.style.boxShadow = "0 0 30px rgba(255, 176, 88, .48), 0 0 72px rgba(249, 138, 56, .3)";
+        } else {
+          sun.style.background = "radial-gradient(circle at 35% 35%, #fff6c9 0%, #ffd45e 60%, #ffbf3c 100%)";
+          sun.style.boxShadow = "0 0 24px rgba(255, 214, 94, .42), 0 0 60px rgba(255, 190, 72, .24)";
+        }
+        moonCut.style.background = sky.top;
+      }
+
+      function updateOneMeteorStar(star, now) {
+        const baseX = parseFloat(star.dataset.baseX || star.dataset.xp * w);
+        const baseY = parseFloat(star.dataset.baseY || star.dataset.yp * h);
+        const start = parseFloat(star.dataset.fallStart || "0");
+        const preDur = parseFloat(star.dataset.preDuration || String(METEOR_PRE_MS));
+        const fallDur = parseFloat(star.dataset.fallDuration || String(METEOR_FALL_MS));
+        const impactDur = parseFloat(star.dataset.impactDuration || String(METEOR_IMPACT_MS));
+        const dx = parseFloat(star.dataset.fallDx || "0");
+        const rot = parseFloat(star.dataset.fallRotate || "220");
+        const phase = star.dataset.fallPhase || "pre";
+        const palIdx = parseInt(star.dataset.fallPalette || "0", 10) % 4;
+        const pal = meteorPalettes[palIdx];
+        const groundY = h - Math.max(h * 0.18, 108) + 8;
+
+        if (phase === "pre") {
+          const p = clamp((now - start) / preDur, 0, 1);
+          const inhale = p < 0.45 ? (1 - p * 0.22) : (0.9 + (p - 0.45) * 0.95);
+          star.style.left = baseX + "px";
+          star.style.top = baseY + "px";
+          star.style.background = pal.accent;
+          star.style.transform = "scale(" + inhale + ") rotate(" + (p * 12) + "deg)";
+          star.style.boxShadow = "0 0 " + (10 + p * 16) + "px " + pal.accent + ", 0 0 " + (4 + p * 8) + "px " + pal.trail;
+          star.style.opacity = String(clamp(0.72 + p * 0.28, 0, 1));
+          star.style.filter = "brightness(" + (0.98 + p * 0.22) + ")";
+          if (p >= 1) {
+            star.dataset.fallPhase = "fall";
+            star.dataset.fallStart = String(now);
+          }
+          return;
+        }
+
+        if (phase === "fall") {
+          const p = clamp((now - start) / fallDur, 0, 1);
+          const ease = 1 - Math.pow(1 - p, 1.5);
+          const arc = Math.sin(p * Math.PI) * 24;
+          const x = baseX + dx * ease;
+          const y = baseY + (groundY - baseY) * ease - arc;
+          const trailX = -Math.sign(dx || 1) * (34 + Math.abs(dx) * 0.28);
+          star.style.left = x + "px";
+          star.style.top = y + "px";
+          star.style.background = pal.bg;
+          star.style.opacity = String(clamp(1 - p * 0.06, 0, 1));
+          star.style.transform = "scale(" + (1.35 - p * 0.48) + ") rotate(" + (rot * p) + "deg)";
+          star.style.boxShadow = "0 0 12px " + pal.accent + ", " + (trailX * 0.75) + "px 1px 14px " + pal.trail + ", " + (trailX * 1.4) + "px 2px 26px " + pal.glow + ", " + (trailX * 2.05) + "px 3px 38px rgba(160,205,255,.18)";
+          star.style.filter = "";
+          if (p >= 1) {
+            star.dataset.fallPhase = "impact";
+            star.dataset.fallStart = String(now);
+            star.dataset.impactX = String(x);
+            star.dataset.impactY = String(y);
+            starFlashUntil = now + STAR_FLASH_MS;
+            impactWaveUntil = now + IMPACT_WAVE_MS;
+            impactWaveX = x;
+            impactWaveY = y;
+          }
+          return;
+        }
+
+        const p = clamp((now - start) / impactDur, 0, 1);
+        const impactX = parseFloat(star.dataset.impactX || String(baseX + dx));
+        const impactY = parseFloat(star.dataset.impactY || String(groundY));
+        star.style.left = impactX + "px";
+        star.style.top = impactY + "px";
+        star.style.background = pal.accent;
+        star.style.opacity = String(clamp(1 - p * 1.15, 0, 1));
+        star.style.transform = "scale(" + (1.1 + p * 4.2) + ")";
+        star.style.boxShadow = "0 0 " + (8 + p * 24) + "px " + pal.accent + ", 0 0 " + (3 + p * 10) + "px " + pal.trail;
+        star.style.filter = "";
+        if (p >= 1) {
+          star.dataset.falling = "0";
+          star.dataset.fallPhase = "idle";
+          star.classList.remove("shooting");
+          star.style.left = baseX + "px";
+          star.style.top = baseY + "px";
+          star.style.transform = "";
+          star.style.borderRadius = "";
+          star.style.boxShadow = "";
+          star.style.clipPath = "";
+          star.style.opacity = "";
+          star.style.filter = "";
+        }
+      }
+
+      function updateIdleStar(star, now, starIdx, starVis) {
+        const baseX = parseFloat(star.dataset.baseX || star.dataset.xp * w);
+        const baseY = parseFloat(star.dataset.baseY || star.dataset.yp * h);
+        const twinkle = 0.78 + Math.sin(now * 0.002 + parseFloat(star.dataset.delay) * 3 + starIdx) * 0.22;
+        const type = parseInt(star.dataset.type || "0", 10) % 3;
+        const idleColor = type === 1 ? "rgba(255,240,201,.95)" : (type === 2 ? "rgba(217,238,255,.95)" : "rgba(248,251,255,.96)");
+        star.style.opacity = clamp(starVis * twinkle, 0, 1);
+        star.style.left = baseX + "px";
+        star.style.top = baseY + "px";
+        star.style.background = idleColor;
+        if (!star.matches(":hover")) {
+          star.style.transform = "";
+          star.style.boxShadow = "0 0 " + (8 + starVis * 14) + "px rgba(255,255,255," + (0.22 + starVis * 0.32) + ")";
+        }
+      }
+
+      function updateStars(now, starVis) {
+        for (let i = 0; i < stars.length; i++) {
+          const star = stars[i];
+          if (star.dataset.falling === "1") updateOneMeteorStar(star, now);
+          else updateIdleStar(star, now, i, starVis);
+        }
+      }
+
+      function updateCloudWeather(i, now, season, cloudLeft, cloudTop, cfg) {
+        const holder = cloudWeatherHolders[i];
+        const state = cloudWeatherState[i];
+        const active = state.eventUntil > now;
+        setRect(holder, { left: cloudLeft, top: cloudTop + cfg.h * 0.3, width: cfg.w, height: cfg.h + 200 });
+
+        if (!active) {
+          for (let p = 0; p < state.particles.length; p++) {
+            state.particles[p].el.style.opacity = "0";
+          }
+          return;
+        }
+
+        const type = state.eventType;
+        const total = Math.max(state.eventUntil - state.eventStart, 1);
+        const t = clamp((now - state.eventStart) / total, 0, 1);
+        const fade = t < 0.14 ? t / 0.14 : (t > 0.85 ? (1 - t) / 0.15 : 1);
+
+        for (let p = 0; p < state.particles.length; p++) {
+          const particle = state.particles[p];
+          const el = particle.el;
+          const phase = (now * 0.0012 + particle.offset * 0.001 + p * 0.37);
+          const flow = ((phase % 1) + 1) % 1;
+          if (type === "rain") {
+            const x = particle.spread * cfg.w;
+            const y = flow * (110 + season.precipIntensity * 58);
+            el.style.width = "2px";
+            el.style.height = (8 + season.precipIntensity * 6) + "px";
+            el.style.borderRadius = "2px";
+            el.style.background = "linear-gradient(to bottom, rgba(186,220,255,.9), rgba(152,188,232,.2))";
+            el.style.opacity = String(clamp(0.22 + fade * 0.85, 0, .95));
+            el.style.transform = "translate(" + x + "px," + y + "px) rotate(8deg)";
+          } else if (type === "snow") {
+            const drift = Math.sin(now * 0.0015 + particle.offset) * (7 + particle.spread * 7);
+            const x = particle.spread * cfg.w + drift;
+            const y = flow * (84 + season.precipIntensity * 72);
+            const size = 2 + particle.seed * 3;
+            el.style.width = size + "px";
+            el.style.height = size + "px";
+            el.style.borderRadius = "50%";
+            el.style.background = "rgba(238,246,255,.95)";
+            el.style.opacity = String(clamp(0.2 + fade * (0.7 + particle.seed * 0.2), 0, .9));
+            el.style.transform = "translate(" + x + "px," + y + "px)";
+          } else if (type === "leaf") {
+            const sway = Math.sin(now * 0.0042 + particle.offset) * (12 + particle.seed * 8);
+            const x = particle.spread * cfg.w + sway;
+            const y = flow * 130;
+            const rot = particle.seed * 360 + now * 0.08 * particle.drift;
+            el.style.width = "8px";
+            el.style.height = "5px";
+            el.style.borderRadius = "68% 32% 62% 38%";
+            el.style.background = "linear-gradient(120deg, rgba(212,150,80,.95), rgba(135,86,43,.9))";
+            el.style.opacity = String(clamp(0.16 + fade * 0.88, 0, .9));
+            el.style.transform = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+          } else {
+            const swirl = Math.sin(now * 0.006 + particle.offset) * 14;
+            const x = particle.spread * cfg.w + swirl;
+            const y = 8 + Math.sin(now * 0.004 + particle.offset) * 12 + particle.seed * 26;
+            const size = 3 + particle.seed * 5;
+            el.style.width = size + "px";
+            el.style.height = size + "px";
+            el.style.borderRadius = "50%";
+            el.style.background = "radial-gradient(circle, rgba(255,245,198,.95), rgba(255,206,132,.2))";
+            el.style.opacity = String(clamp(0.08 + fade * 0.62, 0, .72));
+            el.style.transform = "translate(" + x + "px," + y + "px)";
+          }
+        }
+      }
+
+      function updateGlobalPrecip(now, daylight, season) {
+        const active = globalPrecipState.until > now && (globalPrecipState.type === "rain" || globalPrecipState.type === "snow");
+        if (!active) {
+          for (let i = 0; i < globalPrecipState.particles.length; i++) {
+            globalPrecipState.particles[i].el.style.opacity = "0";
+          }
+          return;
+        }
+
+        const total = Math.max(globalPrecipState.until - globalPrecipState.start, 1);
+        const t = clamp((now - globalPrecipState.start) / total, 0, 1);
+        const fade = t < 0.14 ? (t / 0.14) : (t > 0.84 ? (1 - t) / 0.16 : 1);
+        const isRain = globalPrecipState.type === "rain";
+        const density = clamp(globalPrecipState.intensity * (isRain ? (0.96 + season.precipIntensity * 0.46) : (0.62 + season.precipIntensity * 0.24)), 0.5, 1.7);
+        const opacityBase = isRain ? (0.44 + (1 - daylight) * 0.22) : (0.34 + (1 - daylight) * 0.18);
+
+        for (let i = 0; i < globalPrecipState.particles.length; i++) {
+          const p = globalPrecipState.particles[i];
+          const flow = ((now * (isRain ? 0.0017 : 0.00072) * p.speed + p.offset) % 1 + 1) % 1;
+          const drift = Math.sin(now * (isRain ? 0.0018 : 0.0012) + p.offset * 0.004) * (isRain ? 8 : 18);
+          const x = p.x * w + drift;
+          const y = flow * (h + 240) - 130;
+
+          if (isRain) {
+            const len = (12 + season.precipIntensity * 12) * density;
+            p.el.style.width = Math.max(1.3, p.size + 0.2) + "px";
+            p.el.style.height = len + "px";
+            p.el.style.borderRadius = "2px";
+            p.el.style.background = "linear-gradient(to bottom, rgba(206,233,255,.98), rgba(166,202,244,.22))";
+            p.el.style.opacity = String(clamp(opacityBase * fade, 0, .88));
+            p.el.style.transform = "translate(" + x + "px," + y + "px) rotate(11deg)";
+          } else {
+            const size = (1.6 + p.size * 2.4) * density * 0.72;
+            p.el.style.width = size + "px";
+            p.el.style.height = size + "px";
+            p.el.style.borderRadius = "50%";
+            p.el.style.background = "rgba(239,247,255,.96)";
+            p.el.style.opacity = String(clamp(opacityBase * fade * (0.78 + (p.size * 0.18)), 0, .82));
+            p.el.style.transform = "translate(" + x + "px," + y + "px)";
+          }
+        }
+      }
+
+      function updateClouds(now, daylight, reverseFlash, season) {
+        const cloudSpeed = 0.00008 * season.cloudSpeed;
+        const cloudWrap = 1.15;
+        const cloudReset = -0.25;
+        for (let i = 0; i < cloudCfg.length; i++) {
+          const cfg = cloudCfg[i];
+          const state = cloudWeatherState[i];
+          const pulse = clamp((state.pulseUntil - now) / CLOUD_PULSE_MS, 0, 1) * state.pulseStrength;
+          const hover = state.hovered ? 1 : 0;
+
+          cfg.x += cfg.speed * cloudSpeed;
+          if (cfg.x > cloudWrap) cfg.x = cloudReset;
+          const cloudTop = cfg.y * h + season.cloudLift + Math.sin(now * 0.00035 + i) * (4 + season.cloudThickness * 1.2);
+          const cloudLeft = cfg.x * w;
+          const shakeX = reverseFlash > 0.02 ? (i % 2 ? -1 : 1) * reverseFlash * 18 : 0;
+          const shakeY = reverseFlash > 0.02 ? Math.sin(now * 0.02 + i) * 1.4 * reverseFlash : 0;
+          const eventBoost = state.eventUntil > now ? 1 : 0;
+          const pulseX = (pulse + eventBoost * 0.85) * (i % 2 ? -1 : 1) * (12 + 4 * Math.sin(now * 0.011 + i));
+          const pulseY = (pulse + eventBoost * 0.65) * Math.cos(now * 0.009 + i * 2) * 4;
+
+          clouds[i].style.width = cfg.w + "px";
+          clouds[i].style.height = cfg.h + "px";
+          clouds[i].style.left = cloudLeft + "px";
+          clouds[i].style.top = cloudTop + "px";
+          clouds[i].style.opacity = clamp(daylight * 0.76 * season.cloudOpacity + hover * 0.09 - pulse * 0.08 + eventBoost * 0.12, 0, 0.9);
+          clouds[i].style.transform = "translate(" + (shakeX + pulseX) + "px, " + (shakeY + pulseY) + "px) scale(" + (season.cloudScale + hover * 0.08 + pulse * 0.1 + eventBoost * 0.14) + "," + (season.cloudThickness + hover * 0.04) + ")";
+
+          updateCloudWeather(i, now, season, cloudLeft, cloudTop, cfg);
+        }
+      }
+
+      function updateHills(daylight, duskAmount) {
+        const hillBright = 0.74 + daylight * 0.34;
+        for (let i = 0; i < hills.length; i++) {
+          const dayCol = hillPalettes.day[i];
+          const nightCol = hillPalettes.night[i];
+          const sunsetCol = hillPalettes.sunset[i];
+          const dayMix = lerp(nightCol, dayCol, daylight);
+          const finalCol = lerp(dayMix, sunsetCol, duskAmount * 0.72);
+          hills[i].style.background = "linear-gradient(to top, " + rgb(lerp(finalCol, [22, 24, 28], 0.2)) + " 0%, " + rgb(finalCol) + " 100%)";
+          hills[i].style.filter = "brightness(" + (hillBright * (1 - i * 0.03)) + ")";
+        }
+      }
+
+      function updateTrees(daylight, duskAmount, now, season) {
+        const treeBright = 0.62 + daylight * 0.22;
+        const treeBase = lerp(treePalette.night, treePalette.day, daylight);
+        const treeWarm = lerp(treeBase, treePalette.sunset, duskAmount * 0.62);
+        const seasonTree = lerp(season.treeShade, season.treeHue, clamp(daylight * 0.9 + 0.08, 0, 1));
+        const treeFinal = lerp(treeWarm, seasonTree, 0.58);
+
+        for (let i = 0; i < trees.length; i++) {
+          const state = treePulseStates[i];
+          const hover = state.hovered ? 1 : 0;
+          const pulse = clamp((state.pulseUntil - now) / TREE_PULSE_MS, 0, 1) * state.pulseStrength;
+          const resonate = clamp((state.resonateUntil - now) / TREE_RESONATE_MS, 0, 1) * state.resonateStrength;
+
+          const lowArr = lerp(treeFinal, [18, 22, 24], 0.18 + i * 0.04);
+          const highArr = lerp(treeFinal, [126, 141, 131], 0.06);
+          trees[i].style.background = "linear-gradient(to top, " + rgb(lowArr) + " 0%, " + rgb(highArr) + " 100%)";
+
+          const sway = Math.sin(now * 0.0021 + i * 0.9) * (0.8 + season.treeSwing * 1.12);
+          const rotate = sway + hover * 1.9 + pulse * 4.1 + resonate * 2.6;
+          const scaleX = 1 + hover * 0.01 + pulse * 0.03 + resonate * 0.02;
+          const scaleY = 1 + hover * 0.03 + pulse * 0.07 + resonate * 0.03;
+          trees[i].style.transform = "rotate(" + rotate + "deg) scale(" + scaleX + "," + scaleY + ")";
+          trees[i].style.filter = "brightness(" + (treeBright * (0.95 + i * 0.02) + resonate * 0.1) + ")";
+
+          const crowns = treeCrowns[i];
+          for (let c = 0; c < crowns.length; c++) {
+            const crown = crowns[c];
+            let density = season.treeDensity - c * 0.12 + hover * 0.11 + pulse * 0.16 + resonate * 0.1;
+            if (season.treeDensity < 0.62 && c === 2) density *= 0.45;
+            density = clamp(density, 0.04, 0.98);
+            const spread = season.treeSpread + hover * 0.05 + pulse * 0.16;
+            const side = c === 0 ? -1 : (c === 2 ? 1 : 0);
+            const driftX = side * (pulse * 10 + resonate * 7);
+            const driftY = -(pulse * 6 + resonate * 4 + hover * 1.3);
+            const crownTone = lerp(treeFinal, season.treeHue, 0.38 + c * 0.1);
+            const crownDark = lerp(crownTone, [40, 47, 46], 0.28);
+            crown.style.background = "radial-gradient(circle at 40% 34%, " + rgb(lerp(crownTone, [220, 228, 218], 0.07)) + " 0%, " + rgb(crownTone) + " 58%, " + rgb(crownDark) + " 100%)";
+            crown.style.opacity = density;
+            crown.style.transform = "translate(" + driftX + "px," + driftY + "px) scale(" + spread + ")";
+          }
+        }
+      }
+
+      function updatePath(daylight, duskAmount, season) {
+        const pathTopBase = lerp(pathPalettes.night[0], pathPalettes.day[0], daylight);
+        const pathTopFinal = lerp(pathTopBase, pathPalettes.sunset[0], duskAmount * 0.78);
+        const pathBottomBase = lerp(pathPalettes.night[1], pathPalettes.day[1], daylight);
+        const pathBottomFinal = lerp(pathBottomBase, pathPalettes.sunset[1], duskAmount * 0.78);
+        const seasonTop = shiftColor(pathTopFinal, season.pathShift, 0.7);
+        const seasonBottom = shiftColor(pathBottomFinal, season.pathShift, 0.7);
+        pathRight.style.background = "linear-gradient(to bottom, " + rgb(seasonTop) + " 0%, " + rgb(seasonBottom) + " 100%)";
+        pathRight.style.filter = "brightness(" + (0.82 + daylight * 0.2 + season.windowBoost * 0.02) + ") blur(.35px)";
+      }
+
+      function updateGround(daylight, duskAmount, season) {
+        const backBase = lerp(groundPalettes.back.night, groundPalettes.back.day, daylight);
+        const backFinal = lerp(backBase, groundPalettes.back.sunset, duskAmount * 0.8);
+        const frontBase = lerp(groundPalettes.front.night, groundPalettes.front.day, daylight);
+        const frontFinal = lerp(frontBase, groundPalettes.front.sunset, duskAmount * 0.8);
+        const seasonBack = shiftColor(backFinal, season.groundBackShift, 0.72);
+        const seasonFront = shiftColor(frontFinal, season.groundFrontShift, 0.72);
+        const backDark = rgb(lerp(seasonBack, [40, 44, 43], 0.2));
+        const frontDark = rgb(lerp(seasonFront, [28, 32, 30], 0.25));
+        groundBack.style.background = "linear-gradient(to top, " + backDark + " 0%, " + rgb(seasonBack) + " 100%)";
+        groundFront.style.background = "linear-gradient(to top, " + frontDark + " 0%, " + rgb(seasonFront) + " 56%, " + rgb(lerp(seasonFront, [208, 188, 160], 0.12)) + " 100%)";
+      }
+
+      function updateHouse(now, daylight, duskAmount, moonlight, starVis, reverseFlash, season, interior) {
+        const wallBase = lerp(housePalettes.wall.night, housePalettes.wall.day, daylight);
+        const roofBase = lerp(housePalettes.roof.night, housePalettes.roof.day, daylight);
+        const chimneyBase = lerp(housePalettes.chimney.night, housePalettes.chimney.day, daylight);
+        const sillBase = lerp(housePalettes.sill.night, housePalettes.sill.day, daylight);
+        const doorBase = lerp(housePalettes.door.night, housePalettes.door.day, daylight);
+
+        const wallFinal = shiftColor(lerp(wallBase, housePalettes.wall.sunset, duskAmount * 0.72), season.houseTint, 0.8);
+        const roofFinal = shiftColor(lerp(roofBase, housePalettes.roof.sunset, duskAmount * 0.72), season.houseTint, 0.46);
+        const chimneyFinal = shiftColor(lerp(chimneyBase, housePalettes.chimney.sunset, duskAmount * 0.72), season.houseTint, 0.4);
+        const sillFinal = shiftColor(lerp(sillBase, housePalettes.sill.sunset, duskAmount * 0.72), season.houseTint, 0.36);
+        const doorFinal = shiftColor(lerp(doorBase, housePalettes.door.sunset, duskAmount * 0.72), season.houseTint, 0.56);
+
+        house.style.background = "linear-gradient(to top, " + rgb(lerp(wallFinal, [60, 54, 48], 0.22)) + " 0%, " + rgb(lerp(wallFinal, [255, 242, 220], 0.06)) + " 52%, " + rgb(wallFinal) + " 100%)";
+        roof.style.background = "linear-gradient(to right, " + rgb(lerp(roofFinal, [28, 24, 22], 0.25)) + " 0%, " + rgb(lerp(roofFinal, [180, 150, 130], 0.07)) + " 50%, " + rgb(lerp(roofFinal, [28, 24, 22], 0.25)) + " 100%)";
+        roofLeft.style.background = "linear-gradient(to top, " + rgb(lerp(roofFinal, [20, 18, 17], 0.28)) + " 0%, " + rgb(roofFinal) + " 100%)";
+        roofRight.style.background = roofLeft.style.background;
+        chimney.style.background = "linear-gradient(to top, " + rgb(lerp(chimneyFinal, [25, 22, 21], 0.22)) + " 0%, " + rgb(chimneyFinal) + " 100%)";
+        for (let i = 0; i < sills.length; i++) {
+          sills[i].style.background = "linear-gradient(to right, " + rgb(lerp(sillFinal, [26, 22, 21], 0.2)) + " 0%, " + rgb(sillFinal) + " 100%)";
+        }
+
+        const starFlash = clamp((starFlashUntil - now) / STAR_FLASH_MS, 0, 1);
+        const sceneFlash = Math.max(starFlash, reverseFlash * 0.75, interior.pulse * 0.88);
+        const houseBright = 0.72 + daylight * 0.1 + moonlight * 0.08 + sceneFlash * 0.13;
+        const roofBright = 0.68 + daylight * 0.1 + moonlight * 0.06 + sceneFlash * 0.08;
+        house.style.filter = "brightness(" + houseBright + ")";
+        roof.style.filter = "brightness(" + roofBright + ")";
+        roofLeft.style.filter = "brightness(" + (roofBright * 0.98) + ")";
+        roofRight.style.filter = roofLeft.style.filter;
+        chimney.style.filter = "brightness(" + ((0.7 + daylight * 0.08 + moonlight * 0.05) * 0.98 + interior.pulse * 0.04) + ")";
+
+        const doorGlowBase = 0.74 + daylight * 0.06 + moonlight * 0.04 + interior.pulse * 0.1;
+        door.style.filter = "brightness(" + doorGlowBase + ")";
+        door.style.opacity = String(1 - interior.doorOpen * 0.86);
+        door.style.transform = "translateX(" + (-2.5 * interior.doorOpen) + "px) scaleX(" + (1 - interior.doorOpen * 0.28) + ")";
+
+        const winGlow = clamp(starVis * 0.95 + starFlash * 0.92 + reverseFlash * 0.3 + interior.pulse * 0.85, 0, 1.2);
+        const warmColor = season.windowColor.map(v => clamp(Math.round(v * (0.9 + season.windowBoost * 0.09)), 0, 255));
+        const winColor = "rgba(" + warmColor[0] + "," + warmColor[1] + "," + warmColor[2] + "," + (0.08 + winGlow * 0.8) + ")";
+        const winShadow = "inset 0 1px 1px rgba(255,244,218,.22), 0 0 " + (3 + winGlow * 14) + "px rgba(" + warmColor[0] + "," + warmColor[1] + "," + warmColor[2] + "," + (0.08 + winGlow * 0.42) + ")";
+        for (let i = 0; i < windows.length; i++) {
+          windows[i].style.background = winColor;
+          windows[i].style.boxShadow = winShadow;
+        }
+        for (let i = 0; i < sills.length; i++) {
+          sills[i].style.opacity = 0.84 + daylight * 0.08 + interior.pulse * 0.12;
+        }
+
+        const doorGlow = clamp(winGlow * 0.58 + starFlash * 0.5 + interior.pulse * season.doorBoost, 0, 1.5);
+        door.style.background = "linear-gradient(to top, " + rgb(lerp(doorFinal, [34, 24, 20], 0.26)) + " 0%, " + rgb(lerp(doorFinal, [186, 132, 92], 0.1)) + " 100%)";
+        door.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px rgba(0,0,0,.14), 0 0 " + (2 + doorGlow * 8) + "px rgba(" + warmColor[0] + "," + warmColor[1] + "," + warmColor[2] + "," + (0.04 + doorGlow * 0.12) + ")";
+      }
+
+      function updateSeasonSymbolLayers(now, season, daylight) {
+        const cold = season.coldWash;
+        const wet = season.id === "spring" ? 0.5 : 0;
+        seasonWash.style.opacity = String(clamp(0.06 + cold * 0.34 + wet * 0.22, 0, 0.58));
+        seasonWash.style.background = "radial-gradient(circle at 58% 24%, rgba(" +
+          Math.round(186 - season.heatShimmer * 26) + "," +
+          Math.round(216 - season.heatShimmer * 28) + "," +
+          Math.round(242 + cold * 8) +
+          ",.26) 0%, rgba(182,212,238,.08) 32%, transparent 74%)";
+
+        const shimmerCore = Math.pow(clamp(daylight, 0, 1), 1.2);
+        const shimmerPulse = 0.55 + Math.sin(now * 0.0062) * 0.14 + Math.sin(now * 0.013) * 0.08;
+        const shimmerOpacity = clamp(season.heatShimmer * shimmerCore * (0.34 + shimmerPulse), 0, 0.92);
+        heatShimmer.style.opacity = String(shimmerOpacity);
+        heatShimmer.style.transform = "translateY(" + (Math.sin(now * 0.0018) * 2.2) + "px) scaleY(" + (1 + season.heatShimmer * 0.2) + ")";
+        heatShimmer.style.background =
+          "radial-gradient(160% 84% at 50% 100%, rgba(255,214,146," + (0.12 + season.heatShimmer * 0.2) + ") 0%, rgba(255,228,186," + (0.07 + season.heatShimmer * 0.12) + ") 36%, rgba(255,238,206,0) 74%)";
+
+        const summerBright = season.id === "summer" ? clamp(daylight * 0.14, 0, 0.14) : 0;
+        scene.style.filter = "brightness(" + (1 + summerBright) + ") saturate(" + (1 + summerBright * 0.3) + ")";
+
+        groundFrost.style.opacity = String(clamp(season.frostLevel * 0.86, 0, 0.92));
+        groundFrost.style.filter = "brightness(" + (0.9 + season.frostLevel * 0.24) + ")";
+
+        const wheatOpacity = clamp(season.wheatVisible, 0, 1);
+        for (let i = 0; i < wheatClumps.length; i++) {
+          wheatClumps[i].style.opacity = String(wheatOpacity);
+          wheatClumps[i].style.transform = "translateY(" + (Math.sin(now * 0.002 + i) * 1.2 * wheatOpacity) + "px)";
+        }
+        const leafOpacity = clamp(season.foliageFallRate * 0.82 + (season.id === "winter" ? 0.12 : 0), 0, 0.9);
+        for (let i = 0; i < groundLeaves.length; i++) {
+          groundLeaves[i].style.opacity = String(leafOpacity);
+        }
+      }
+
+      function updateLeafBurstParticles(now) {
+        for (let i = 0; i < leafBurstParticles.length; i++) {
+          const p = leafBurstParticles[i];
+          if (!p.active) {
+            p.el.style.opacity = "0";
+            continue;
+          }
+          const t = clamp((now - p.start) / Math.max(p.duration, 1), 0, 1);
+          const ease = 1 - Math.pow(1 - t, 1.42);
+          const gravity = t * t * 180;
+          const x = p.x0 + p.vx * ease;
+          const y = p.y0 + p.vy * ease + gravity;
+          const rot = p.rot + p.spin * ease;
+          p.el.style.left = x + "px";
+          p.el.style.top = y + "px";
+          p.el.style.opacity = String(clamp((1 - t) * 0.92, 0, 0.92));
+          p.el.style.transform = "rotate(" + rot + "deg)";
+          if (t >= 1) p.active = false;
+        }
+      }
+
+      function updateGroundBump(reverseFlash) {
+        const bump = reverseFlash > 0 ? -GROUND_BUMP_PX * reverseFlash : 0;
+        groundBack.style.transform = bump ? "translateY(" + bump + "px)" : "";
+        groundFront.style.transform = bump ? "translateY(" + bump + "px)" : "";
+        pathRight.style.transform = bump ? "translateY(" + bump + "px)" : "";
+        groundFrost.style.transform = bump ? "translateY(" + bump + "px)" : "";
+        for (let i = 0; i < hills.length; i++) {
+          const baseT = hills[i].dataset.baseTransform || "";
+          hills[i].style.transform = bump ? baseT + " translateY(" + bump + "px)" : baseT;
+        }
+      }
+
+      function updateImpactWave(now) {
+        const impactP = clamp((impactWaveUntil - now) / IMPACT_WAVE_MS, 0, 1);
+        if (impactP > 0) {
+          impactWave.style.left = impactWaveX + "px";
+          impactWave.style.top = impactWaveY + "px";
+          impactWave.style.opacity = String(clamp(impactP * 0.9, 0, 0.9));
+          impactWave.style.transform = "scale(" + (1.2 + (1 - impactP) * 4.6) + ")";
+        } else {
+          impactWave.style.opacity = "0";
+        }
+      }
+
+      function updateTimeWave(now) {
+        const waveP = clamp((timeWaveUntil - now) / TIME_WAVE_MS, 0, 1);
+        if (waveP > 0) {
+          timeWave.style.left = timeWaveX + "px";
+          timeWave.style.top = timeWaveY + "px";
+          timeWave.style.opacity = String(clamp(waveP * 0.82, 0, 0.82));
+          timeWave.style.transform = "scale(" + (1.2 + (1 - waveP) * 28) + ")";
+          if (warmWaveUntil > now) {
+            timeWave.style.background = "radial-gradient(circle, rgba(255,225,167,.42) 0%, rgba(255,183,116,.24) 38%, transparent 72%)";
+          } else {
+            timeWave.style.background = "radial-gradient(circle, rgba(255,255,255,.34) 0%, rgba(185,220,255,.18) 38%, transparent 72%)";
+          }
+        } else {
+          timeWave.style.opacity = "0";
+        }
+      }
+
+      function updateTimeOrbit(now) {
+        if (direction !== -1 && orbitUntil <= now) {
+          timeOrbit.style.opacity = "0";
+          return;
+        }
+        let handAngle;
+        let opacity;
+        if (direction === -1) {
+          const total = Math.max((reverseUntil - orbitStartTime), 1);
+          const t = clamp((now - orbitStartTime) / total, 0, 1);
+          handAngle = orbitBaseAngle + (-720 * t);
+          opacity = 0.78;
+        } else {
+          const fade = clamp((orbitUntil - now) / ORBIT_FADE_MS, 0, 1);
+          handAngle = orbitBaseAngle - 720;
+          opacity = 0.78 * fade;
+        }
+        timeOrbit.style.left = timeWaveX + "px";
+        timeOrbit.style.top = timeWaveY + "px";
+        timeOrbit.style.opacity = String(opacity);
+        timeOrbit.style.transform = "scale(1)";
+        timeOrbitHand.style.transform = "rotate(" + handAngle + "deg)";
+      }
+
+      function updateWash(reverseFlash) {
+        wash.style.background = "radial-gradient(circle at " + timeWaveX + "px " + timeWaveY + "px, rgba(255,255,255,.26), transparent 26%), linear-gradient(to bottom, rgba(255,255,255,.03), rgba(255,255,255,.08))";
+        if (direction === -1) wash.style.opacity = String(clamp(0.25 + reverseFlash * 0.58, 0, 0.86));
+        else wash.style.opacity = reverseFlash > 0.02 ? String(clamp(reverseFlash * 0.5, 0, 0.5)) : "0";
+      }
+
+      function updateScene(now) {
+        applyReverseState(now);
+        const season = updateSeasonState(now);
+        const orbit = computeOrbit();
+        const lighting = computeLighting(orbit.sunH, orbit.moonH);
+        const daylight = lighting.daylight;
+        const duskAmount = lighting.duskAmount;
+        const moonlight = lighting.moonlight;
+        const sky = lighting.sky;
+
+        updateSkyBackground(sky);
+        const reverseFlash = clamp((reverseFlashUntil - now) / REVERSE_FLASH_MS, 0, 1);
+        updateSunAndMoon(orbit.sunX, orbit.sunY, orbit.moonX, orbit.moonY, daylight, moonlight, reverseFlash, sky, season, now);
+
+        const starVis = clamp((1 - daylight) * 1.15, 0, 1);
+        updateStars(now, starVis);
+        updateClouds(now, daylight, reverseFlash, season);
+        updateGlobalPrecip(now, daylight, season);
+        updateHills(daylight, duskAmount);
+        updateTrees(daylight, duskAmount, now, season);
+        updatePath(daylight, duskAmount, season);
+        updateGround(daylight, duskAmount, season);
+        updateSeasonSymbolLayers(now, season, daylight);
+
+        const interior = updateHouseInterior(now, season);
+        updateOutdoorPerson(daylight, moonlight, orbit.sunX, orbit.sunH, orbit.moonH, now, season);
+        updateIndoorPersonVisual(now, season, interior, daylight, moonlight);
+        updateDeliveryPersonVisual(now, season, interior, daylight, moonlight);
+        updateHouse(now, daylight, duskAmount, moonlight, starVis, reverseFlash, season, interior);
+        updateLeafBurstParticles(now);
+        updateGroundBump(reverseFlash);
+
+        updateImpactWave(now);
+        updateTimeWave(now);
+        updateTimeOrbit(now);
+        updateWash(reverseFlash);
+        requestAnimationFrame(updateScene);
+      }
+
+      function triggerReverse(evt, bodyEl) {
+        const now = performance.now();
+        const rect = (bodyEl || sun).getBoundingClientRect();
+        timeWaveX = rect.left + rect.width / 2;
+        timeWaveY = rect.top + rect.height / 2;
+        orbitStartTime = now;
+        orbitUntil = now + 1200;
+        orbitBaseAngle = ((cycle + 0.25) % 1) * 360;
+        direction *= -1;
+        reverseUntil = now + 4000;
+        reverseFlashUntil = now + REVERSE_FLASH_MS;
+        timeWaveUntil = now + TIME_WAVE_MS;
+        starFlashUntil = Math.max(starFlashUntil, now + 220);
+        if (bodyEl === sun && lastSeasonId === "summer") {
+          sunBurstUntil = now + 760;
+        }
+        wash.style.opacity = "1";
+        setTimeout(() => { if (direction === -1) wash.style.opacity = ".4"; }, 220);
+      }
+
+      sun.addEventListener("click", e => triggerReverse(e, sun));
+      moon.addEventListener("click", e => triggerReverse(e, moon));
+      window.addEventListener("resize", layout);
+
+      setSceneSeasonClass(seasonState.currentIndex);
+      createCloudWeatherParticles();
+      createGlobalPrecipParticles();
+      createLeafBurstParticles();
+      bindInteractions();
+      layout();
+      requestAnimationFrame(updateScene);
+    })();
+  </script>
+</body>
+
+</html>
